@@ -1,0 +1,103 @@
+### Register user
+POST http://localhost:5000/api/users/register
+Content-Type: application/json
+
+{
+  "username": "John",
+  "email": "john@example.com",
+  "password": "123456"
+}
+### 
+POST  http://localhost:5000/api/productions
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDI1NjM2NWNhZDYxN2MxN2NmMzE2OCIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYXNzdXJhbmNlLmNvbSIsImlhdCI6MTc2ODE0MzQ5OCwiZXhwIjoxNzY4MjI5ODk4fQ.qDTeJsPeAT77sYeWvYsptPlZWpNJZkmJBcxtz1ZRp20
+Content-Type: application/json
+
+{
+  "natureOperation": "Production A",
+  "client": "Description of Production A",
+  "dateEff": "2024-06-01",
+  "moisDem": "2024-06",
+  "compagne": "Compagne 1",
+  "numpolice": "12345674444",
+  "parameters":[
+    {
+      "name": "Parameter 1"
+    }
+  ],
+
+  "category": "Category1"
+}
+### Login user
+POST http://localhost:5000/api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "123456"
+}
+
+### Register admin
+POST http://localhost:5000/api/users/register
+Content-Type: application/json
+
+{
+  "username": "AdminUser",
+  "email": "admin1@example.com",
+  "password": "admin123",
+  "role": "admin"
+}
+
+### Login
+POST http://localhost:5000/api/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@assurance.com",
+  "password": "admin"
+}
+
+### Access profile (use token from login)
+GET http://localhost:5000/api/users/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDI1NjM2NWNhZDYxN2MxN2NmMzE2OCIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYXNzdXJhbmNlLmNvbSIsImlhdCI6MTc2Mzg5MjcxOSwiZXhwIjoxNzYzOTc5MTE5fQ.C41GOqHCQh3CK78y8iisk1p0Cu8lKDORkTycOz6_Ba8
+
+
+GET http://localhost:5000/api/users/admin
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDI1NjM2NWNhZDYxN2MxN2NmMzE2OCIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYXNzdXJhbmNlLmNvbSIsImlhdCI6MTc2Mzg5MjcxOSwiZXhwIjoxNzYzOTc5MTE5fQ.C41GOqHCQh3CK78y8iisk1p0Cu8lKDORkTycOz6_Ba8
+
+
+
+### Add particulier
+### Add particulier
+POST http://localhost:5000/api/clients
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZmI4OWQ4ZDJhM2M3NWYxYzEzM2NiNCIsImlhdCI6MTc2MTMxNjcwNSwiZXhwIjoxNzYxNDAzMTA1fQ.HY2G8KyE6gnk50iqFfNiDoyJpJNABokQvkkpxgO8XUE
+
+type=particulier
+cin=AA12345
+nom=ElGlile
+prenom=Ayoub
+tel=0612345678
+adresse=Berkane
+doc=@C:\Users\Hassan\Downloads\data.png
+
+### Add societe
+POST http://localhost:5000/api/clients
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+type=societe
+nom=DataCaffe
+tel=0612345678
+adresse=Casablanca
+doc=@C:\path\file.pdf
+ice=123456789012345
+if=987654
+rc=12345
+
+###
+GET http://localhost:5000/api/parametres/68ff20f2eb4d7c36459ea50b
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZmI4OWQ4ZDJhM2M3NWYxYzEzM2NiNCIsInJvbGUiOiJ1c2VyIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxNTYwNjI0LCJleHAiOjE3NjE2NDcwMjR9.kJWLbgFW-dNPhFRPCBOi78CSybWfVNlj3S74dtNSCyo
+
+
+### Update TVA
+GET http://localhost:5000/api/tva
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDI1NjM2NWNhZDYxN2MxN2NmMzE2OCIsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiYWRtaW5AYXNzdXJhbmNlLmNvbSIsImlhdCI6MTc2ODE0MTgyOCwiZXhwIjoxNzY4MjI4MjI4fQ.XBxPkT6wlcF231Xme5D6zxnW9Xu8qnf7_zc7jBLC2Go
