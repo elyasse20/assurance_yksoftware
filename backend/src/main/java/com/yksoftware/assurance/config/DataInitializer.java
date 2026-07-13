@@ -1,7 +1,7 @@
 package com.yksoftware.assurance.config;
 
-import com.yksoftware.assurance.model.User;
-import com.yksoftware.assurance.repository.UserRepository;
+import com.yksoftware.assurance.model.*;
+import com.yksoftware.assurance.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,14 +9,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
- * DataInitializer — runs on startup, creates the default admin user if none exists.
- * Equivalent of seedAdmin.js in the Node.js backend.
- *
- * Configure the admin credentials via environment variables:
- *   ADMIN_EMAIL    (default: admin@yksoftware.com)
- *   ADMIN_PASSWORD (default: admin123)
- *   ADMIN_USERNAME (default: admin)
+ * DataInitializer — runs on startup, creates the default admin user and seeds default
+ * parameters, categories, natures and TVA from specifications if they are empty.
  */
 @Component
 @RequiredArgsConstructor
@@ -24,6 +21,10 @@ import org.springframework.stereotype.Component;
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final NatureRepository natureRepository;
+    private final CategoryRepository categoryRepository;
+    private final ParametreRepository parametreRepository;
+    private final TvaRepository tvaRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.email:admin@yksoftware.com}")
@@ -37,6 +38,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        seedAdmin();
+        seedNatures();
+        seedCategories();
+        seedParametres();
+        seedTvas();
+    }
+
+    private void seedAdmin() {
         if (userRepository.existsByEmail(adminEmail)) {
             log.info("✓ Admin user already exists: {}", adminEmail);
             return;
@@ -52,5 +61,57 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(admin);
         log.info("✓ Admin user created: {} (role: ADMIN)", adminEmail);
         log.warn("⚠ Change the default admin password in production!");
+    }
+
+    private void seedNatures() {
+        if (natureRepository.count() == 0) {
+            List<Nature> natures = List.of(
+                    Nature.builder().name("RENOUVELLEMENT").build(),
+                    Nature.builder().name("AFFAIRE NOUVELLE").build()
+            );
+            natureRepository.saveAll(natures);
+            log.info("✓ Seeded {} default Natures", natures.size());
+        }
+    }
+
+    private void seedCategories() {
+        if (categoryRepository.count() == 0) {
+            List<Category> categories = List.of(
+                    Category.builder().name("AT").build(),
+                    Category.builder().name("RC").build(),
+                    Category.builder().name("MULT").build(),
+                    Category.builder().name("SANT INTER").build(),
+                    Category.builder().name("MARITIME").build()
+            );
+            categoryRepository.saveAll(categories);
+            log.info("✓ Seeded {} default Categories", categories.size());
+        }
+    }
+
+    private void seedParametres() {
+        if (parametreRepository.count() == 0) {
+            List<Parametre> parametres = List.of(
+                    Parametre.builder().name("PRIMES").build(),
+                    Parametre.builder().name("TAXE").build(),
+                    Parametre.builder().name("TAXE PARAFISCALE").build(),
+                    Parametre.builder().name("ACCESSOIRE").build(),
+                    Parametre.builder().name("CNPAC").build()
+            );
+            parametreRepository.saveAll(parametres);
+            log.info("✓ Seeded {} default Parametres (specifications align)", parametres.size());
+        }
+    }
+
+    private void seedTvas() {
+        if (tvaRepository.count() == 0) {
+            List<Tva> tvas = List.of(
+                    Tva.builder().name("TVA 14%").rate(14.0).build(),
+                    Tva.builder().name("TVA 20%").rate(20.0).build(),
+                    Tva.builder().name("TVA 10%").rate(10.0).build(),
+                    Tva.builder().name("TVA 7%").rate(7.0).build()
+            );
+            tvaRepository.saveAll(tvas);
+            log.info("✓ Seeded {} default TVAs", tvas.size());
+        }
     }
 }
