@@ -123,7 +123,7 @@ export default function UsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" title="Supprimer">

@@ -159,7 +159,7 @@ export default function OperationsPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
                         onClick={() => router.push(`/regelements/${prod.id}`)} title="Règlement">
                         <CreditCard className="w-3.5 h-3.5" />

@@ -235,7 +235,7 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
                           </Button>
                         </>
                       ) : (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => handleEdit(item)} title="Modifier">
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
