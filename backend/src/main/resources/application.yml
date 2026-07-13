@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/assurance}
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 15MB
+      max-request-size: 15MB
+
+app:
+  jwt-secret: ${JWT_SECRET:changeme_super_secret_key_at_least_32_chars_long}
+  jwt-expiration-ms: 86400000   # 1 day
+  uploads-dir: ${UPLOADS_DIR:./uploads}
+  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
+  admin:
+    email: ${ADMIN_EMAIL:admin@yksoftware.com}
+    password: ${ADMIN_PASSWORD:admin123}
+    username: ${ADMIN_USERNAME:admin}
+
+logging:
+  level:
+    com.yksoftware.assurance: DEBUG
+    org.springframework.security: INFO
