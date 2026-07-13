@@ -77,28 +77,30 @@ public class DataInitializer implements CommandLineRunner {
     private void seedCategories() {
         if (categoryRepository.count() == 0) {
             List<Category> categories = List.of(
-                    Category.builder().name("AT").build(),
-                    Category.builder().name("RC").build(),
-                    Category.builder().name("MULT").build(),
-                    Category.builder().name("SANT INTER").build(),
-                    Category.builder().name("MARITIME").build()
+                    Category.builder().name("AT").commissionRate(15.0).build(),
+                    Category.builder().name("RC").commissionRate(25.0).build(),
+                    Category.builder().name("MULT").commissionRate(25.0).build(),
+                    Category.builder().name("SANT INTER").commissionRate(10.0).build(),
+                    Category.builder().name("MARITIME").commissionRate(27.5).build()
             );
             categoryRepository.saveAll(categories);
-            log.info("✓ Seeded {} default Categories", categories.size());
+            log.info("✓ Seeded {} default Categories with commission rates", categories.size());
         }
     }
 
     private void seedParametres() {
         if (parametreRepository.count() == 0) {
             List<Parametre> parametres = List.of(
-                    Parametre.builder().name("PRIMES").build(),
-                    Parametre.builder().name("TAXE").build(),
-                    Parametre.builder().name("TAXE PARAFISCALE").build(),
-                    Parametre.builder().name("ACCESSOIRE").build(),
-                    Parametre.builder().name("CNPAC").build()
+                    Parametre.builder().name("PRIMES").type("number").value("0").build(),
+                    Parametre.builder().name("TAXE").type("number").value("0").build(),
+                    Parametre.builder().name("TAXE PARAFISCALE").type("number").value("0").build(),
+                    Parametre.builder().name("ACCESSOIRE").type("number").value("0").build(),
+                    Parametre.builder().name("CNPAC").type("number").value("0").build(),
+                    Parametre.builder().name("Nom de l'entreprise").type("text").value("YK Assurance").build(),
+                    Parametre.builder().name("TVA Standard").type("number").value("14").build()
             );
             parametreRepository.saveAll(parametres);
-            log.info("✓ Seeded {} default Parametres (specifications align)", parametres.size());
+            log.info("✓ Seeded {} default Parametres with types and values", parametres.size());
         }
     }
 

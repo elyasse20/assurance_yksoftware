@@ -4,25 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle, FileText, TrendingUp } from 'lucide-react';
 import api from '@/lib/api';
-import { Nature, Category, Compagne, Tva, Parametre, ProductionParameter } from '@/types';
+import { Nature, Category, Compagne, Tva, Parametre, ProductionParameter, Client } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Combobox } from '@/components/ui/combobox';
 
 const emptyParam = (): Omit<ProductionParameter, 'name'> & { name: string } =>
   ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0, commission: 0 });
-
-const getCommissionRate = (catName: string): number => {
-  const clean = catName.trim().toUpperCase();
-  if (clean === 'AT') return 0.15;
-  if (clean === 'RC') return 0.25;
-  if (clean === 'MULT') return 0.25;
-  if (clean === 'SANT INTER' || clean === 'SANTÉ INTER') return 0.10;
-  if (clean === 'MARITIME') return 0.275;
-  return 0;
-};
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 function FieldRow({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
@@ -34,10 +25,10 @@ function FieldRow({ label, id, children }: { label: string; id: string; children
   );
 }
 
-function StyledInput({ id, value, onChange, required = false, type = 'text', placeholder }: any) {
+function StyledInput({ id, value, onChange, required = false, type = 'text', placeholder, readOnly = false }: any) {
   return (
     <Input id={id} type={type} value={value} onChange={onChange} required={required}
-      placeholder={placeholder}
+      placeholder={placeholder} readOnly={readOnly}
       className="bg-muted/30 border-border focus:border-primary" />
   );
 }
@@ -60,6 +51,7 @@ export default function NewOperationPage() {
   const [compagnes, setCompagnes] = useState<Compagne[]>([]);
   const [tvas, setTvas] = useState<Tva[]>([]);
   const [parametres, setParametres] = useState<Parametre[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const [form, setForm] = useState({
     natureOperation: '', client: '', dateEff: '',
@@ -73,13 +65,19 @@ export default function NewOperationPage() {
     Promise.all([
       api.get<Nature[]>('/natures'), api.get<Category[]>('/categories'),
       api.get<Compagne[]>('/compagnes'), api.get<Tva[]>('/tva'),
-      api.get<Parametre[]>('/parametres'),
-    ]).then(([n, c, comp, t, p]) => {
+      api.get<Parametre[]>('/parametres'), api.get<Client[]>('/clients'),
+    ]).then(([n, c, comp, t, p, cl]) => {
       setNatures(n.data); setCategories(c.data);
       setCompagnes(comp.data); setTvas(t.data);
-      setParametres(p.data);
+      setParametres(p.data); setClients(cl.data);
     });
   }, []);
+
+  const getCommissionRate = (catName: string): number => {
+    const found = categories.find(c => c.name === catName);
+    const rate = found ? found.commissionRate : 0.0;
+    return rate / 100.0;
+  };
 
   const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
@@ -163,7 +161,13 @@ export default function NewOperationPage() {
               </StyledSelect>
             </FieldRow>
             <FieldRow label="Client (nom)" id="client">
-              <StyledInput id="client" value={form.client} onChange={setF('client')} required placeholder="Nom du client" />
+              <Combobox
+                options={clients.map(c => ({ value: c.nom, label: c.nom }))}
+                value={form.client}
+                onChange={val => setForm(p => ({ ...p, client: val }))}
+                placeholder="Rechercher un client..."
+                emptyText="Aucun client trouvé."
+              />
             </FieldRow>
             <FieldRow label="N° Police" id="numpolice">
               <StyledInput id="numpolice" value={form.numpolice} onChange={setF('numpolice')} required placeholder="Numéro de police" />
@@ -256,9 +260,9 @@ export default function NewOperationPage() {
                       </td>
                     ))}
                     <td className="py-3 pr-3">
-                      <Input type="number" min="0" step="0.01"
-                        value={param.commission} onChange={setParam(i, 'commission')}
-                        className="bg-muted/30 border-border focus:border-primary w-24 h-9" />
+                      <Input type="number" min="0" step="0.01" readOnly
+                        value={param.commission}
+                        className="bg-muted/10 border-border text-muted-foreground w-24 h-9 cursor-not-allowed" />
                     </td>
                     <td className="py-3">
                       {params.length > 1 && (

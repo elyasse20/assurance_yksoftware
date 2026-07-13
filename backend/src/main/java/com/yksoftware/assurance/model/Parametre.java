@@ -9,5 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class Parametre {
     @Id private String id;
-    private String name;
+    private String name; // Key
+    private String value;
+    private String type; // e.g. "text" | "number" | "boolean"
 }
