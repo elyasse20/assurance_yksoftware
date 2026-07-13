@@ -31,7 +31,8 @@ export default function NewClientPage() {
     try {
       const data: Record<string, any> = { ...form, type, budget: +form.budget, credit: +form.credit };
       const fd = new FormData();
-      fd.append('data', JSON.stringify(data));
+      const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      fd.append('data', jsonBlob);
       if (file) fd.append('doc', file);
 
       await api.post<Client>('/clients', fd, { headers: { 'Content-Type': 'multipart/form-data' } });

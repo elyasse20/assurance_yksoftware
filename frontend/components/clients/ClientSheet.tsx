@@ -66,7 +66,8 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
         credit: +form.credit,
       };
       const fd = new FormData();
-      fd.append('data', JSON.stringify(data));
+      const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      fd.append('data', jsonBlob);
       if (file) fd.append('doc', file);
 
       const { data: created } = await api.post<Client>('/clients', fd, {
