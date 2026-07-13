@@ -14,6 +14,12 @@ public class ProductionRequest {
     private double tvaRate;
     private String category;
     private String numpolice;
+    
+    // Specific fields for MARITIME category (from Specifications)
+    private String refCie;
+    private String certificat;
+    private String navire;
+
     private List<ProductionParameterRequest> parameters;
 
     @Data

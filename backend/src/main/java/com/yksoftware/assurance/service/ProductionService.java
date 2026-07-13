@@ -61,6 +61,9 @@ public class ProductionService {
         prod.setTvaRate(req.getTvaRate());
         prod.setCategory(req.getCategory());
         prod.setNumpolice(req.getNumpolice());
+        prod.setRefCie(req.getRefCie());
+        prod.setCertificat(req.getCertificat());
+        prod.setNavire(req.getNavire());
 
         if (req.getParameters() != null) {
             prod.setParameters(req.getParameters().stream()

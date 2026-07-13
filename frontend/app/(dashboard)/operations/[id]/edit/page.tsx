@@ -1,20 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle, FileText, TrendingUp } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
+import { ArrowLeft, Trash2, Loader2, AlertCircle, FileText, TrendingUp, Plus } from 'lucide-react';
 import api from '@/lib/api';
-import { Nature, Category, Compagne, Tva, Parametre, ProductionParameter } from '@/types';
+import { Nature, Category, Compagne, Tva, Parametre, Production } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
-const emptyParam = (): Omit<ProductionParameter, 'name'> & { name: string } =>
-  ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0 });
+const emptyParam = () => ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0 });
 
-/* ── Sub-components ──────────────────────────────────────────────────────── */
 function FieldRow({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -41,8 +39,10 @@ function StyledSelect({ id, value, onChange, required = false, children }: any) 
   );
 }
 
-export default function NewOperationPage() {
+export default function EditOperationPage() {
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [natures, setNatures] = useState<Nature[]>([]);
@@ -57,19 +57,40 @@ export default function NewOperationPage() {
     category: '', numpolice: '',
     refCie: '', certificat: '', navire: '',
   });
-  const [params, setParams] = useState([emptyParam()]);
+  const [params, setParams] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
       api.get<Nature[]>('/natures'), api.get<Category[]>('/categories'),
       api.get<Compagne[]>('/compagnes'), api.get<Tva[]>('/tva'),
       api.get<Parametre[]>('/parametres'),
-    ]).then(([n, c, comp, t, p]) => {
+      api.get<Production>(`/productions/${id}`),
+    ]).then(([n, c, comp, t, p, prodRes]) => {
       setNatures(n.data); setCategories(c.data);
       setCompagnes(comp.data); setTvas(t.data);
       setParametres(p.data);
+
+      const prod = prodRes.data;
+      setForm({
+        natureOperation: prod.natureOperation ?? '',
+        client: prod.client ?? '',
+        dateEff: prod.dateEff ? prod.dateEff.slice(0, 10) : '',
+        moisDem: prod.moisDem ?? '',
+        compagne: prod.compagne ?? '',
+        tvaRate: String(prod.tvaRate ?? 0),
+        category: prod.category ?? '',
+        numpolice: prod.numpolice ?? '',
+        refCie: prod.refCie ?? '',
+        certificat: prod.certificat ?? '',
+        navire: prod.navire ?? '',
+      });
+      setParams(prod.parameters?.length ? prod.parameters : [emptyParam()]);
+      setLoading(false);
+    }).catch(() => {
+      setError('Erreur lors du chargement des données');
+      setLoading(false);
     });
-  }, []);
+  }, [id]);
 
   const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
@@ -87,12 +108,19 @@ export default function NewOperationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setSaving(true);
     try {
-      await api.post('/productions', { ...form, tvaRate: +form.tvaRate, parameters: params });
+      await api.put(`/productions/${id}`, { ...form, tvaRate: +form.tvaRate, parameters: params });
       router.push('/operations');
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Erreur lors de la création');
+      setError(err.response?.data?.message ?? 'Erreur lors de la modification');
     } finally { setSaving(false); }
   };
+
+  if (loading) return (
+    <div className="max-w-4xl space-y-6">
+      <div className="h-12 bg-muted/30 rounded-xl animate-pulse" />
+      <div className="h-48 bg-muted/30 rounded-xl animate-pulse" />
+    </div>
+  );
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -106,9 +134,9 @@ export default function NewOperationPage() {
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileText className="w-4 h-4 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Nouvelle opération</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Modifier l'opération</h1>
           </div>
-          <p className="text-sm text-muted-foreground pl-10">Créer une nouvelle police d'assurance</p>
+          <p className="text-sm text-muted-foreground pl-10">Modifier la police N° {form.numpolice}</p>
         </div>
       </div>
 
@@ -244,7 +272,7 @@ export default function NewOperationPage() {
           <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>Annuler</Button>
           <Button type="submit" disabled={saving} className="flex-1 shadow-lg shadow-primary/20">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saving ? 'Création...' : "Créer l'opération"}
+            {saving ? 'Enregistrement...' : 'Sauvegarder'}
           </Button>
         </div>
       </form>

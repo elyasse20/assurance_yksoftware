@@ -60,6 +60,9 @@ export interface Production {
   tvaRate: number;
   category: string;
   numpolice: string;
+  refCie?: string;
+  certificat?: string;
+  navire?: string;
   parameters: ProductionParameter[];
   montantTotal?: number; // virtual — may be present if Spring returns it
   createdAt: string;
