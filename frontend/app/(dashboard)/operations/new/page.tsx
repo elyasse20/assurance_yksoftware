@@ -12,7 +12,17 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 const emptyParam = (): Omit<ProductionParameter, 'name'> & { name: string } =>
-  ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0 });
+  ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0, commission: 0 });
+
+const getCommissionRate = (catName: string): number => {
+  const clean = catName.trim().toUpperCase();
+  if (clean === 'AT') return 0.15;
+  if (clean === 'RC') return 0.25;
+  if (clean === 'MULT') return 0.25;
+  if (clean === 'SANT INTER' || clean === 'SANTÉ INTER') return 0.10;
+  if (clean === 'MARITIME') return 0.275;
+  return 0;
+};
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 function FieldRow({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
@@ -74,10 +84,31 @@ export default function NewOperationPage() {
   const setF = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCategory = e.target.value;
+    setForm(p => ({ ...p, category: newCategory }));
+    
+    // Auto-recalculate commission for all parameters based on the new category rate
+    const rate = getCommissionRate(newCategory);
+    setParams(prev =>
+      prev.map(p => ({
+        ...p,
+        commission: Number((p.primes * rate).toFixed(2))
+      }))
+    );
+  };
+
   const setParam = (i: number, k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setParams(prev => {
       const next = [...prev];
-      (next[i] as any)[k] = k === 'name' ? e.target.value : +e.target.value;
+      const val = k === 'name' ? e.target.value : +e.target.value;
+      (next[i] as any)[k] = val;
+      
+      // Auto-calculate commission when primes changes
+      if (k === 'primes') {
+        const rate = getCommissionRate(form.category);
+        next[i].commission = Number((Number(val) * rate).toFixed(2));
+      }
       return next;
     });
   };
@@ -141,7 +172,7 @@ export default function NewOperationPage() {
               <StyledInput id="dateEff" type="date" value={form.dateEff} onChange={setF('dateEff')} required />
             </FieldRow>
             <FieldRow label="Mois de demande" id="moisDem">
-              <StyledInput id="moisDem" value={form.moisDem} onChange={setF('moisDem')} required placeholder="Ex: Janvier 2024" />
+              <StyledInput id="moisDem" type="date" value={form.moisDem} onChange={setF('moisDem')} required />
             </FieldRow>
             <FieldRow label="Compagne" id="compagne">
               <StyledSelect id="compagne" value={form.compagne} onChange={setF('compagne')} required>
@@ -150,7 +181,7 @@ export default function NewOperationPage() {
               </StyledSelect>
             </FieldRow>
             <FieldRow label="Catégorie" id="category">
-              <StyledSelect id="category" value={form.category} onChange={setF('category')} required>
+              <StyledSelect id="category" value={form.category} onChange={handleCategoryChange} required>
                 <option value="">-- Sélectionner --</option>
                 {categories.map(c => <option key={c.id} value={c.name} className="bg-card">{c.name}</option>)}
               </StyledSelect>
@@ -202,7 +233,7 @@ export default function NewOperationPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {['Paramètre', 'Primes', 'Taxe', 'Taxe Para', 'Accessoire', 'CNPC', ''].map(h => (
+                  {['Paramètre', 'Primes', 'Taxe', 'Taxe Para', 'Accessoire', 'CNPC', 'Commission', ''].map(h => (
                     <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-3 pr-3">{h}</th>
                   ))}
                 </tr>
@@ -224,6 +255,11 @@ export default function NewOperationPage() {
                           className="bg-muted/30 border-border focus:border-primary w-24 h-9" />
                       </td>
                     ))}
+                    <td className="py-3 pr-3">
+                      <Input type="number" min="0" step="0.01"
+                        value={param.commission} onChange={setParam(i, 'commission')}
+                        className="bg-muted/30 border-border focus:border-primary w-24 h-9" />
+                    </td>
                     <td className="py-3">
                       {params.length > 1 && (
                         <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"

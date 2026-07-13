@@ -30,5 +30,6 @@ public class ProductionRequest {
         private double taxepara;
         private double accessoire;
         private double cnpc;
+        private double commission;
     }
 }

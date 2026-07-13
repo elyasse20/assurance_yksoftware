@@ -48,6 +48,7 @@ export interface ProductionParameter {
   taxepara: number;
   accessoire: number;
   cnpc: number;
+  commission: number;
 }
 
 export interface Production {

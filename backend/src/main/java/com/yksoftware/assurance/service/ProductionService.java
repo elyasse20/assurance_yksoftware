@@ -74,6 +74,7 @@ public class ProductionService {
                             .taxepara(p.getTaxepara())
                             .accessoire(p.getAccessoire())
                             .cnpc(p.getCnpc())
+                            .commission(p.getCommission())
                             .build())
                     .collect(Collectors.toList()));
         }

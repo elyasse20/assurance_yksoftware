@@ -28,4 +28,7 @@ public class ProductionParameter {
 
     @Builder.Default
     private double cnpc = 0;
+
+    @Builder.Default
+    private double commission = 0;
 }
