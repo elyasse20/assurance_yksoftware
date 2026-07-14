@@ -30,6 +30,14 @@ public class UserController {
         return userService.getAll();
     }
 
+    /** POST /api/users — create a new user (admin only) */
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> create(@RequestBody RegisterRequest req) {
+        User created = userService.register(req);
+        return ResponseEntity.status(201)
+                .body(Map.of("message", "User created successfully", "id", created.getId()));
+    }
+
     /** PUT /api/users/:id — equivalent of updateUser */
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> update(@PathVariable String id,

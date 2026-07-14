@@ -189,17 +189,17 @@ export default function OperationsPage() {
   const selectCls = "flex h-9 rounded-lg border border-input bg-muted/30 px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-primary" />
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Opérations</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Opérations</h1>
           </div>
-          <p className="text-sm text-muted-foreground pl-10">
+          <p className="text-sm text-muted-foreground pl-12">
             {loading ? 'Chargement…' : (
               <>
                 <span className="font-medium text-foreground">{filtered.length}</span>
@@ -237,8 +237,8 @@ export default function OperationsPage() {
 
       {/* Filter bar */}
       {showFilters && (
-        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between mb-1">
+        <div className="rounded-xl border border-border bg-card/60 p-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filtres actifs</p>
             {hasFilters && (
               <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground" onClick={clearFilters}>
@@ -246,7 +246,7 @@ export default function OperationsPage() {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Text search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />

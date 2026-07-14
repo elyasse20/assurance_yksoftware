@@ -55,26 +55,27 @@ function KpiCard({
   icon: React.ElementType; color: string; loading: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-3 relative overflow-hidden group hover:border-primary/30 transition-colors">
+    <div className="rounded-xl border border-border bg-card p-6 space-y-4 relative overflow-hidden group hover:border-primary/30 transition-colors">
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br ${color} rounded-xl`} />
       <div className="relative flex items-start justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br ${color}`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br ${color}`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
       </div>
       <div className="relative">
         {loading ? (
-          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-9 w-36" />
         ) : (
           <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>
         )}
         {sub && !loading && (
-          <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+          <p className="text-xs text-muted-foreground mt-1">{sub}</p>
         )}
       </div>
     </div>
   );
+
 }
 
 /** Simple CSS-only horizontal bar chart */
@@ -217,16 +218,16 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Page header */}
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <BarChart2 className="w-4 h-4 text-primary" />
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <BarChart2 className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Tableau de bord</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tableau de bord</h1>
         </div>
-        <p className="text-sm text-muted-foreground pl-10">
+        <p className="text-sm text-muted-foreground pl-12">
           Vue d'ensemble de l'activité — {new Date().toLocaleDateString('fr-MA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
@@ -239,7 +240,7 @@ export default function DashboardPage() {
       )}
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
         <KpiCard loading={loading} label="Opérations" icon={FileText}
           value={loading ? '…' : String(stats?.totalProductions ?? 0)}
           sub="polices enregistrées"
@@ -263,10 +264,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {/* Monthly bar chart */}
-        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-6 space-y-4">
+        <div className="lg:col-span-2 rounded-xl border border-border bg-card p-7 space-y-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Productions par mois</h2>
@@ -324,10 +325,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Category + Compagne charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* Category donut */}
-        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div className="rounded-xl border border-border bg-card p-7 space-y-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Répartition par catégorie</h2>
             <p className="text-xs text-muted-foreground">Toutes les opérations</p>
@@ -387,7 +388,7 @@ export default function DashboardPage() {
             (stats?.recentProductions ?? []).map(prod => {
               const sc = STATUS_CFG[(prod.reglementStatus ?? 'EN_ATTENTE') as keyof typeof STATUS_CFG] ?? STATUS_CFG.EN_ATTENTE;
               return (
-                <div key={prod.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/30 transition-colors group">
+                <div key={prod.id} className="flex items-center gap-5 px-7 py-5 hover:bg-muted/30 transition-colors group">
                   <span className="font-mono text-sm text-primary font-semibold w-28 flex-shrink-0">{prod.numpolice}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{prod.client}</p>

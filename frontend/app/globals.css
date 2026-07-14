@@ -115,3 +115,75 @@ body {
 
 /* ── Smooth transitions for interactive elements ─────────────────────────── */
 a, button { transition: all 0.15s ease; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN SYSTEM — SPACING & WHITESPACE
+   These rules enforce consistent, breathable spacing across all pages.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Page-level section spacing ──────────────────────────────────────────── */
+/*  All direct children of .space-y-8 get extra bottom margin on large screens */
+@media (min-width: 1024px) {
+  .space-y-8 > * + * {
+    margin-top: 2.5rem; /* 40px instead of 32px on desktop */
+  }
+}
+
+/* ── Card breathing room ─────────────────────────────────────────────────── */
+/*  Any rounded card with border gets at least 1.5rem (24px) padding */
+.rounded-xl.border.bg-card {
+  padding: 1.5rem;           /* default — pages can override with p-X utility */
+}
+
+/* ── Table rows: more vertical breathing room ────────────────────────────── */
+thead th {
+  padding-top: 0.875rem !important;    /* 14px */
+  padding-bottom: 0.875rem !important;
+}
+tbody td {
+  padding-top: 0.875rem !important;
+  padding-bottom: 0.875rem !important;
+}
+
+/* ── Section heading spacing ─────────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
+}
+
+/* ── Form fields: space out labels from inputs ───────────────────────────── */
+.space-y-1\.5 {
+  row-gap: 0.5rem;
+}
+
+/* ── Badge: slightly more horizontal padding ─────────────────────────────── */
+.badge, [class*="badge"] {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+/* ── Separator: give vertical breathing room ─────────────────────────────── */
+[data-slot="separator"][aria-orientation="horizontal"] {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ── Alert/info banners: more padding ────────────────────────────────────── */
+[role="alert"], .alert {
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+}
+
+/* ── Stat/KPI footer rows ────────────────────────────────────────────────── */
+.kpi-row {
+  gap: 1.25rem;
+}
+
+/* ── Empty state containers: more padding ────────────────────────────────── */
+.empty-state {
+  padding: 5rem 2rem;
+}
+
+/* ── Utility: comfortable section gap used in page layouts ───────────────── */
+.section-gap > * + * {
+  margin-top: 2rem;
+}

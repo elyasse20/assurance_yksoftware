@@ -65,7 +65,7 @@ export default function NavBar() {
       </div>
 
       {/* ── Navigation ───────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
         {navGroups.map((group, gi) => {
           const visibleItems = group.items.filter(
             item => !item.adminOnly || isAdminUser
@@ -73,8 +73,8 @@ export default function NavBar() {
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={gi} className="space-y-1">
-              <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            <div key={gi} className="space-y-1.5">
+              <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
                 {group.label}
               </p>
               {visibleItems.map(item => {
@@ -84,7 +84,7 @@ export default function NavBar() {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group relative',
+                      'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 group relative',
                       active
                         ? 'bg-primary text-primary-foreground shadow-md shadow-primary/25'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -109,7 +109,7 @@ export default function NavBar() {
       {/* ── User footer ──────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 border-t border-border">
         <Separator />
-        <div className="p-4 space-y-3">
+        <div className="p-5 space-y-4">
           {/* User info */}
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9 flex-shrink-0">
