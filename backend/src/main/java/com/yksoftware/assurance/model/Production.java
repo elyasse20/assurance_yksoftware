@@ -50,6 +50,20 @@ public class Production {
     private String certificat;
     private String navire;
 
+    /**
+     * N° d'Ordre interne — appears as the 'ORDRE' column in the MARITIME sheet.
+     * This is distinct from numpolice (which maps to 'POLICE' column).
+     * Example: '74278', '30469'
+     */
+    private String ordre;
+
+    /**
+     * Répartition du montant entre plusieurs compagnies d'assurance.
+     * Used in MARITIME A C: ATLANTA SANAD → 40%, RMA → 20%, etc.
+     */
+    @Builder.Default
+    private List<CompagneRepartition> repartitions = new ArrayList<>();
+
     @Builder.Default
     private List<ProductionParameter> parameters = new ArrayList<>();
 

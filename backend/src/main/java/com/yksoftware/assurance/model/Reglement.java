@@ -44,8 +44,25 @@ public class Reglement {
     @Builder.Default
     private double montantTotal = 0;
 
+    /**
+     * N° Facture — invoice number associated with this settlement.
+     * Appears as the 'N°FACTURE' column in PROD A C and MARITIME A C sheets.
+     */
+    private String numFacture;
+
+    /**
+     * Paiements reçus du client (ce que l'agence encaisse).
+     * Maps to 'REGLER PAR LE CLIENT' in the cahier des charges.
+     */
     @Builder.Default
     private List<Payment> payments = new ArrayList<>();
+
+    /**
+     * Paiements versés à la compagnie d'assurance (ce que l'agence reverse).
+     * Maps to 'REGLER A LA CIE' in the cahier des charges.
+     */
+    @Builder.Default
+    private List<Payment> paymentscie = new ArrayList<>();
 
     @Builder.Default
     private ReglementStatus status = ReglementStatus.EN_ATTENTE;
@@ -57,13 +74,22 @@ public class Reglement {
     private LocalDateTime updatedAt;
 
     /**
-     * Virtual — equivalent to reglementSchema.virtual('totalPaiements').
-     * Not persisted to MongoDB.
+     * Virtual — total of client payments. Not persisted to MongoDB.
      */
     @org.springframework.data.annotation.Transient
     public double getTotalPaiements() {
         if (payments == null || payments.isEmpty()) return 0;
         return payments.stream().mapToDouble(Payment::getMontant).sum();
+    }
+
+    /**
+     * Virtual — total of payments made to the insurance company (CIE).
+     * Not persisted to MongoDB.
+     */
+    @org.springframework.data.annotation.Transient
+    public double getTotalPaiementsCie() {
+        if (paymentscie == null || paymentscie.isEmpty()) return 0;
+        return paymentscie.stream().mapToDouble(Payment::getMontant).sum();
     }
 
     public enum ReglementStatus {

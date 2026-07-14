@@ -17,20 +17,21 @@ const navGroups = [
   {
     label: 'Principal',
     items: [
-      { href: '/clients',        label: 'Clients',       icon: Users,          adminOnly: false },
-      { href: '/operations',     label: 'Opérations',    icon: FileText,       adminOnly: false },
-      { href: '/compagnes',      label: 'Compagnes',     icon: Shield,         adminOnly: false },
-      { href: '/credit-history', label: 'Crédits',       icon: DollarSign,     adminOnly: false },
+      { href: '/dashboard',      label: 'Dashboard',     icon: LayoutDashboard, adminOnly: false },
+      { href: '/clients',        label: 'Clients',       icon: Users,           adminOnly: false },
+      { href: '/operations',     label: 'Opérations',    icon: FileText,        adminOnly: false },
+      { href: '/compagnes',      label: 'Compagnes',     icon: Shield,          adminOnly: false },
+      { href: '/credit-history', label: 'Crédits',       icon: DollarSign,      adminOnly: false },
     ],
   },
   {
     label: 'Configuration',
     items: [
-      { href: '/categories',     label: 'Catégories',    icon: Tag,            adminOnly: false },
-      { href: '/natures',        label: 'Natures',       icon: List,           adminOnly: false },
-      { href: '/parametres',     label: 'Paramètres',    icon: Settings,       adminOnly: false },
-      { href: '/tva',            label: 'TVA',           icon: Percent,        adminOnly: false },
-      { href: '/users',          label: 'Utilisateurs',  icon: Users,          adminOnly: true  },
+      { href: '/categories',     label: 'Catégories',    icon: Tag,             adminOnly: false },
+      { href: '/natures',        label: 'Natures',       icon: List,            adminOnly: false },
+      { href: '/parametres',     label: 'Paramètres',    icon: Settings,        adminOnly: false },
+      { href: '/tva',            label: 'TVA',           icon: Percent,         adminOnly: false },
+      { href: '/users',          label: 'Utilisateurs',  icon: Users,           adminOnly: true  },
     ],
   },
 ];

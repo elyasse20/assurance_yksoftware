@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** Redirect root → /clients (equivalent of <Navigate to="/clients" replace /> in App.jsx) */
+/** Redirect root → /dashboard */
 export default function HomePage() {
-  redirect('/clients');
+  redirect('/dashboard');
 }

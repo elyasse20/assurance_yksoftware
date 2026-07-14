@@ -63,14 +63,19 @@ public class ReglementService {
         Production production = productionRepository.findById(productionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Production (opération) introuvable"));
 
-        // 2. Parse payments
+        // 2. Parse client payments
         List<Payment> newPayments = parsePayments(req.getPayments(), files);
 
-        // 3. Validate at least one payment with montant > 0
+        // 2b. Parse CIE payments early (needed for validation)
+        List<Payment> newPaymentsCie = parsePayments(req.getPaymentscie(), null);
+
+        // 3. Validate at least one payment (client OR CIE) with montant > 0
         double totalNewPayments = newPayments.stream().mapToDouble(Payment::getMontant).sum();
-        if (totalNewPayments <= 0) {
-            throw new IllegalArgumentException("Au moins un montant de paiement est requis");
+        double totalNewPaymentsCie = newPaymentsCie.stream().mapToDouble(Payment::getMontant).sum();
+        if (totalNewPayments <= 0 && totalNewPaymentsCie <= 0) {
+            throw new IllegalArgumentException("Au moins un montant de paiement (client ou CIE) est requis");
         }
+
 
         // 4. Get existing reglement to track credit delta
         Reglement existing = reglementRepository.findByProductionId(productionId).orElse(null);
@@ -80,14 +85,22 @@ public class ReglementService {
                 : 0;
         double newPaymentAmount = Math.max(totalNewPayments - oldTotalPaid, 0);
 
-        // 5. Merge payments
+        // 5. Merge client payments
         List<Payment> allPayments = new ArrayList<>();
         if (existing != null && existing.getPayments() != null) {
             allPayments.addAll(existing.getPayments());
         }
         allPayments.addAll(newPayments);
 
-        // 6. Build / update the reglement
+        // 6. Merge CIE payments (already parsed in step 2b)
+        List<Payment> allPaymentsCie = new ArrayList<>();
+        if (existing != null && existing.getPaymentscie() != null) {
+            allPaymentsCie.addAll(existing.getPaymentscie());
+        }
+        allPaymentsCie.addAll(newPaymentsCie);
+
+
+        // 7. Build / update the reglement
         Reglement reglement = existing != null ? existing : new Reglement();
         reglement.setProduction(production);
         reglement.setNatureOperation(coalesce(req.getNatureOperation(), production.getNatureOperation()));
@@ -98,14 +111,16 @@ public class ReglementService {
         reglement.setCategory(coalesce(req.getCategory(), production.getCategory()));
         reglement.setNumpolice(coalesce(req.getNumpolice(), production.getNumpolice()));
         reglement.setMontantTotal(req.getMontantTotal());
+        reglement.setNumFacture(req.getNumFacture());
         reglement.setPayments(allPayments);
+        reglement.setPaymentscie(allPaymentsCie);
 
-        // 7. Auto-update status (replaces Mongoose pre('save') hook)
+        // 8. Auto-update status (replaces Mongoose pre('save') hook)
         updateStatus(reglement);
 
         Reglement saved = reglementRepository.save(reglement);
 
-        // 8. Update client credit (only for genuinely new payment amounts)
+        // 9. Update client credit (only for genuinely new CLIENT payment amounts)
         if (newPaymentAmount > 0 && req.getClient() != null) {
             updateClientCredit(req.getClient(), newPaymentAmount);
         }

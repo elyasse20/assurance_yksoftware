@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileText, Plus, Edit2, Trash2, CreditCard, RefreshCw,
-  TrendingUp, Calendar, Building2, Hash,
+  TrendingUp, Calendar, Building2, Hash, Filter, X,
+  FileDown, FileSpreadsheet, Search,
 } from 'lucide-react';
 import api from '@/lib/api';
-import { Production } from '@/types';
+import { Production, Compagne, Category } from '@/types';
+import { formatMoisDem, formatAmount } from '@/lib/format';
+import { exportToCSV, exportToPDF, ExportColumn } from '@/lib/export';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead,
@@ -23,6 +27,39 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+// ── Export column definition ──────────────────────────────────────────────────
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { header: 'N° Police',      key: 'numpolice',    width: 28 },
+  { header: 'Client',         key: 'client',       width: 45 },
+  { header: 'Catégorie',      key: 'category',     width: 22 },
+  { header: 'Compagne',       key: 'compagne',     width: 40 },
+  { header: 'Nature',         key: 'natureOperation', width: 30 },
+  { header: 'Date Effet',     key: 'dateEff',      width: 24 },
+  { header: 'Mois Dem',       key: 'moisDemFmt',   width: 20 },
+  { header: 'Total TTC (DH)', key: 'montantStr',   width: 28 },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function prodTotal(prod: Production): number {
+  return prod.parameters?.reduce(
+    (s, p) => s + p.primes + p.taxe + p.taxepara + p.accessoire + p.cnpc, 0
+  ) ?? 0;
+}
+
+function toExportRow(prod: Production): Record<string, unknown> {
+  return {
+    numpolice:       prod.numpolice,
+    client:          prod.client,
+    category:        prod.category,
+    compagne:        prod.compagne,
+    natureOperation: prod.natureOperation,
+    dateEff:         prod.dateEff?.slice(0, 10) ?? '',
+    moisDemFmt:      formatMoisDem(prod.moisDem),
+    montantStr:      prodTotal(prod).toFixed(2),
+  };
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 function TableSkeleton() {
   return (
     <>
@@ -59,17 +96,34 @@ function EmptyOperations({ onAdd }: { onAdd: () => void }) {
   );
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OperationsPage() {
   const router = useRouter();
   const [productions, setProductions] = useState<Production[]>([]);
+  const [compagnes, setCompagnes] = useState<Compagne[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ── Filter state ──────────────────────────────────────────────────────────
+  const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterCompagne, setFilterCompagne] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');   // format "YYYY-MM"
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const { data } = await api.get<Production[]>('/productions');
-      setProductions(data);
+      const [prodRes, compRes, catRes] = await Promise.all([
+        api.get<Production[]>('/productions'),
+        api.get<Compagne[]>('/compagnes'),
+        api.get<Category[]>('/categories'),
+      ]);
+      setProductions(prodRes.data);
+      setCompagnes(compRes.data);
+      setCategories(catRes.data);
     } finally { setLoading(false); setRefreshing(false); }
   }, []);
 
@@ -80,13 +134,62 @@ export default function OperationsPage() {
     setProductions(prev => prev.filter(p => p.id !== id));
   };
 
-  const total = (prod: Production) =>
-    prod.parameters?.reduce((s, p) => s + p.primes + p.taxe + p.taxepara + p.accessoire + p.cnpc, 0) ?? 0;
+  // ── Filtering (client-side) ───────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return productions.filter(prod => {
+      if (q && !(
+        prod.numpolice?.toLowerCase().includes(q) ||
+        prod.client?.toLowerCase().includes(q) ||
+        prod.natureOperation?.toLowerCase().includes(q)
+      )) return false;
+      if (filterCategory && prod.category !== filterCategory) return false;
+      if (filterCompagne && prod.compagne !== filterCompagne) return false;
+      if (filterMonth) {
+        // moisDem is stored as ISO date "YYYY-MM-DD" or "YYYY-MM"
+        const mois = prod.moisDem ?? '';
+        if (!mois.startsWith(filterMonth)) return false;
+      }
+      return true;
+    });
+  }, [productions, search, filterCategory, filterCompagne, filterMonth]);
 
-  const totalRevenu = productions.reduce((s, p) => s + total(p), 0);
+  const hasFilters = search || filterCategory || filterCompagne || filterMonth;
+  const clearFilters = () => {
+    setSearch(''); setFilterCategory(''); setFilterCompagne(''); setFilterMonth('');
+  };
+
+  // ── Totals ────────────────────────────────────────────────────────────────
+  const totalRevenuFiltered = filtered.reduce((s, p) => s + prodTotal(p), 0);
+
+  // ── Export handlers ───────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    exportToCSV(filtered.map(toExportRow), EXPORT_COLUMNS, 'operations');
+  };
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      await exportToPDF(filtered.map(toExportRow), EXPORT_COLUMNS, 'Liste des Opérations', 'operations');
+    } finally { setExporting(false); }
+  };
+
+  // ── Unique month options for filter dropdown ──────────────────────────────
+  const monthOptions = useMemo(() => {
+    const months = new Set<string>();
+    productions.forEach(p => {
+      if (p.moisDem) {
+        const m = p.moisDem.slice(0, 7); // "YYYY-MM"
+        if (m.length === 7) months.add(m);
+      }
+    });
+    return Array.from(months).sort().reverse();
+  }, [productions]);
+
+  const selectCls = "flex h-9 rounded-lg border border-input bg-muted/30 px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -97,19 +200,128 @@ export default function OperationsPage() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Opérations</h1>
           </div>
           <p className="text-sm text-muted-foreground pl-10">
-            {loading ? 'Chargement...' : `${productions.length} opération(s) • Total: ${totalRevenu.toLocaleString('fr-MA')} DH`}
+            {loading ? 'Chargement…' : (
+              <>
+                <span className="font-medium text-foreground">{filtered.length}</span>
+                {hasFilters && ` / ${productions.length}`} opération(s)
+                {' • '}Total : <span className="font-semibold text-green-400">{formatAmount(totalRevenuFiltered)}</span>
+              </>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Button variant="outline" size="icon" onClick={() => fetchData(true)} disabled={refreshing} className="h-9 w-9" title="Actualiser">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
-          <Button onClick={() => router.push('/operations/new')} className="gap-2 shadow-lg shadow-primary/20">
+          <Button variant="outline" size="sm" className="gap-1.5 h-9"
+            onClick={() => setShowFilters(v => !v)}
+            aria-pressed={showFilters}>
+            <Filter className="w-3.5 h-3.5" />
+            Filtres
+            {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportCSV} title="Exporter en Excel (CSV)">
+            <FileSpreadsheet className="w-3.5 h-3.5 text-green-400" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportPDF} disabled={exporting} title="Exporter en PDF">
+            <FileDown className="w-3.5 h-3.5 text-red-400" />
+            {exporting ? 'PDF…' : 'PDF'}
+          </Button>
+          <Button onClick={() => router.push('/operations/new')} className="gap-2 shadow-lg shadow-primary/20 h-9">
             <Plus className="w-4 h-4" />
             Nouvelle opération
           </Button>
         </div>
       </div>
+
+      {/* Filter bar */}
+      {showFilters && (
+        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Filtres actifs</p>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground" onClick={clearFilters}>
+                <X className="w-3 h-3" /> Réinitialiser
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Text search */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Client, police, nature…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="bg-muted/30 border-border focus:border-primary pl-8 h-9"
+              />
+            </div>
+            {/* Category */}
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className={selectCls}
+            >
+              <option value="">Toutes les catégories</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.name} className="bg-card">{c.name}</option>
+              ))}
+            </select>
+            {/* Compagne */}
+            <select
+              value={filterCompagne}
+              onChange={e => setFilterCompagne(e.target.value)}
+              className={selectCls}
+            >
+              <option value="">Toutes les compagnies</option>
+              {compagnes.map(c => (
+                <option key={c.id} value={c.compagneName} className="bg-card">{c.compagneName}</option>
+              ))}
+            </select>
+            {/* Month */}
+            <select
+              value={filterMonth}
+              onChange={e => setFilterMonth(e.target.value)}
+              className={selectCls}
+            >
+              <option value="">Tous les mois</option>
+              {monthOptions.map(m => (
+                <option key={m} value={m} className="bg-card">{formatMoisDem(m + '-01')}</option>
+              ))}
+            </select>
+          </div>
+          {/* Active filter chips */}
+          {hasFilters && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {search && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
+                  <Search className="w-3 h-3" />{search}
+                  <button onClick={() => setSearch('')} className="ml-0.5 hover:text-primary/70"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              )}
+              {filterCategory && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
+                  {filterCategory}
+                  <button onClick={() => setFilterCategory('')} className="ml-0.5 hover:text-primary/70"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              )}
+              {filterCompagne && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
+                  <Building2 className="w-3 h-3" />{filterCompagne}
+                  <button onClick={() => setFilterCompagne('')} className="ml-0.5 hover:text-primary/70"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              )}
+              {filterMonth && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs px-2.5 py-1">
+                  <Calendar className="w-3 h-3" />{formatMoisDem(filterMonth + '-01')}
+                  <button onClick={() => setFilterMonth('')} className="ml-0.5 hover:text-primary/70"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
@@ -127,14 +339,24 @@ export default function OperationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? <TableSkeleton /> : productions.length === 0 ? (
+            {loading ? <TableSkeleton /> : filtered.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={8} className="p-0">
-                  <EmptyOperations onAdd={() => router.push('/operations/new')} />
+                  {hasFilters ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <Filter className="w-8 h-8 text-muted-foreground/30" />
+                      <p className="text-sm font-medium text-foreground">Aucun résultat pour ces filtres</p>
+                      <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1.5">
+                        <X className="w-3.5 h-3.5" /> Réinitialiser les filtres
+                      </Button>
+                    </div>
+                  ) : (
+                    <EmptyOperations onAdd={() => router.push('/operations/new')} />
+                  )}
                 </TableCell>
               </TableRow>
             ) : (
-              productions.map(prod => (
+              filtered.map(prod => (
                 <TableRow key={prod.id} className="border-border/40 group">
                   <TableCell>
                     <span className="font-mono text-sm text-primary font-semibold">{prod.numpolice}</span>
@@ -147,15 +369,16 @@ export default function OperationsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Building2 className="w-3 h-3" />
-                      {prod.compagne}
+                      <Building2 className="w-3 h-3" />{prod.compagne}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{prod.dateEff?.slice(0, 10)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{prod.moisDem}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatMoisDem(prod.moisDem)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <span className="text-sm font-semibold text-green-400 tabular-nums">
-                      {total(prod).toLocaleString('fr-MA')} DH
+                      {prodTotal(prod).toLocaleString('fr-MA')} DH
                     </span>
                   </TableCell>
                   <TableCell>
@@ -197,10 +420,15 @@ export default function OperationsPage() {
       </div>
 
       {/* Stats footer */}
-      {!loading && productions.length > 0 && (
+      {!loading && filtered.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-          <span>{productions.length} opération(s)</span>
-          <span>Revenu total : <span className="font-semibold text-green-400">{totalRevenu.toLocaleString('fr-MA')} DH</span></span>
+          <span>
+            {filtered.length} opération(s)
+            {hasFilters && <span className="text-muted-foreground/60"> (filtrée{filtered.length > 1 ? 's' : ''} sur {productions.length})</span>}
+          </span>
+          <span>
+            Revenu total affiché : <span className="font-semibold text-green-400">{formatAmount(totalRevenuFiltered)}</span>
+          </span>
         </div>
       )}
     </div>

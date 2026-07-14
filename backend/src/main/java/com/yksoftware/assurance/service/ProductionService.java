@@ -2,6 +2,7 @@ package com.yksoftware.assurance.service;
 
 import com.yksoftware.assurance.dto.ProductionRequest;
 import com.yksoftware.assurance.exception.ResourceNotFoundException;
+import com.yksoftware.assurance.model.CompagneRepartition;
 import com.yksoftware.assurance.model.Production;
 import com.yksoftware.assurance.model.ProductionParameter;
 import com.yksoftware.assurance.repository.ProductionRepository;
@@ -64,6 +65,17 @@ public class ProductionService {
         prod.setRefCie(req.getRefCie());
         prod.setCertificat(req.getCertificat());
         prod.setNavire(req.getNavire());
+        prod.setOrdre(req.getOrdre());
+
+        // Map répartitions (company split percentages)
+        if (req.getRepartitions() != null) {
+            prod.setRepartitions(req.getRepartitions().stream()
+                    .map(r -> CompagneRepartition.builder()
+                            .compagneName(r.getCompagneName())
+                            .percent(r.getPercent())
+                            .build())
+                    .collect(Collectors.toList()));
+        }
 
         if (req.getParameters() != null) {
             prod.setParameters(req.getParameters().stream()

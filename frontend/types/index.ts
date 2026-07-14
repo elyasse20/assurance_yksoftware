@@ -51,6 +51,16 @@ export interface ProductionParameter {
   commission: number;
 }
 
+/**
+ * Répartition du montant d'une police entre plusieurs compagnies.
+ * Corresponds to the REPARTITION columns in the MARITIME A C sheet.
+ */
+export interface CompagneRepartition {
+  compagneName: string;
+  /** Percentage (e.g., 40 means 40%) */
+  percent: number;
+}
+
 export interface Production {
   id: string;
   natureOperation: string;
@@ -61,9 +71,13 @@ export interface Production {
   tvaRate: number;
   category: string;
   numpolice: string;
+  /** N° d'Ordre interne (MARITIME sheet 'ORDRE' column, distinct from numpolice) */
+  ordre?: string;
   refCie?: string;
   certificat?: string;
   navire?: string;
+  /** Répartition du montant entre compagnies */
+  repartitions?: CompagneRepartition[];
   parameters: ProductionParameter[];
   montantTotal?: number; // virtual — may be present if Spring returns it
   createdAt: string;
@@ -97,9 +111,15 @@ export interface Reglement {
   category: string;
   numpolice: string;
   montantTotal: number;
+  /** N° Facture (N°FACTURE column in PROD A C / MARITIME A C) */
+  numFacture?: string;
+  /** Paiements reçus du client (REGLER PAR LE CLIENT) */
   payments: Payment[];
+  /** Paiements versés à la compagnie (REGLER A LA CIE) */
+  paymentscie?: Payment[];
   status: ReglementStatus;
   totalPaiements?: number; // virtual
+  totalPaiementsCie?: number; // virtual
   createdAt: string;
   updatedAt: string;
 }

@@ -20,6 +20,12 @@ public class ProductionRequest {
     private String certificat;
     private String navire;
 
+    /** N° d'Ordre interne (MARITIME sheet, 'ORDRE' column), distinct from numpolice */
+    private String ordre;
+
+    /** Répartition du montant entre compagnies (MARITIME A C: REPARTITION columns) */
+    private List<RepartitionRequest> repartitions;
+
     private List<ProductionParameterRequest> parameters;
 
     @Data
@@ -31,5 +37,11 @@ public class ProductionRequest {
         private double accessoire;
         private double cnpc;
         private double commission;
+    }
+
+    @Data
+    public static class RepartitionRequest {
+        private String compagneName;
+        private double percent;
     }
 }

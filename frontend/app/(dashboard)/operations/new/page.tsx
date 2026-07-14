@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle, FileText, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, AlertCircle, FileText, TrendingUp, PieChart } from 'lucide-react';
 import api from '@/lib/api';
-import { Nature, Category, Compagne, Tva, Parametre, ProductionParameter, Client } from '@/types';
+import { Nature, Category, Compagne, Tva, Parametre, ProductionParameter, Client, CompagneRepartition } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { Combobox } from '@/components/ui/combobox';
 
 const emptyParam = (): Omit<ProductionParameter, 'name'> & { name: string } =>
   ({ name: '', primes: 0, taxe: 0, taxepara: 0, accessoire: 0, cnpc: 0, commission: 0 });
+
+const emptyRepartition = (): CompagneRepartition => ({ compagneName: '', percent: 0 });
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 function FieldRow({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
@@ -56,10 +58,11 @@ export default function NewOperationPage() {
   const [form, setForm] = useState({
     natureOperation: '', client: '', dateEff: '',
     moisDem: '', compagne: '', tvaRate: '0',
-    category: '', numpolice: '',
+    category: '', numpolice: '', ordre: '',
     refCie: '', certificat: '', navire: '',
   });
   const [params, setParams] = useState([emptyParam()]);
+  const [repartitions, setRepartitions] = useState<CompagneRepartition[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -85,8 +88,6 @@ export default function NewOperationPage() {
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCategory = e.target.value;
     setForm(p => ({ ...p, category: newCategory }));
-    
-    // Auto-recalculate commission for all parameters based on the new category rate
     const rate = getCommissionRate(newCategory);
     setParams(prev =>
       prev.map(p => ({
@@ -101,8 +102,6 @@ export default function NewOperationPage() {
       const next = [...prev];
       const val = k === 'name' ? e.target.value : +e.target.value;
       (next[i] as any)[k] = val;
-      
-      // Auto-calculate commission when primes changes
       if (k === 'primes') {
         const rate = getCommissionRate(form.category);
         next[i].commission = Number((Number(val) * rate).toFixed(2));
@@ -111,12 +110,29 @@ export default function NewOperationPage() {
     });
   };
 
+  /* ── Répartitions ── */
+  const setRepartition = (i: number, k: keyof CompagneRepartition) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setRepartitions(prev => {
+        const next = [...prev];
+        (next[i] as any)[k] = k === 'percent' ? +e.target.value : e.target.value;
+        return next;
+      });
+    };
+
+  const totalRepartition = repartitions.reduce((s, r) => s + r.percent, 0);
+
   const montantTotal = params.reduce((s, p) => s + p.primes + p.taxe + p.taxepara + p.accessoire + p.cnpc, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setSaving(true);
     try {
-      await api.post('/productions', { ...form, tvaRate: +form.tvaRate, parameters: params });
+      await api.post('/productions', {
+        ...form,
+        tvaRate: +form.tvaRate,
+        parameters: params,
+        repartitions: repartitions.filter(r => r.compagneName && r.percent > 0),
+      });
       router.push('/operations');
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Erreur lors de la création');
@@ -199,6 +215,9 @@ export default function NewOperationPage() {
 
             {form.category.toUpperCase() === 'MARITIME' && (
               <>
+                <FieldRow label="N° Ordre" id="ordre">
+                  <StyledInput id="ordre" value={form.ordre} onChange={setF('ordre')} placeholder="Ex: 74278" />
+                </FieldRow>
                 <FieldRow label="Réf. Compagnie" id="refCie">
                   <StyledInput id="refCie" value={form.refCie} onChange={setF('refCie')} placeholder="Ex: 0070.9201.2026..." />
                 </FieldRow>
@@ -277,6 +296,68 @@ export default function NewOperationPage() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Répartition entre compagnies */}
+        <div className="rounded-xl border border-border bg-card shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">Répartition entre compagnies</h2>
+              <span className="text-xs text-muted-foreground">(optionnel — ex: MARITIME)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {repartitions.length > 0 && (
+                <span className={`text-sm font-semibold tabular-nums ${Math.abs(totalRepartition - 100) < 0.01 ? 'text-green-400' : 'text-amber-400'}`}>
+                  Total: {totalRepartition.toFixed(1)}%
+                </span>
+              )}
+              <Button type="button" onClick={() => setRepartitions(r => [...r, emptyRepartition()])} variant="outline" size="sm" className="gap-1.5">
+                <Plus className="w-3.5 h-3.5" /> Ajouter compagnie
+              </Button>
+            </div>
+          </div>
+          <Separator />
+          {repartitions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucune répartition définie. Cliquez sur "Ajouter compagnie" pour configurer la répartition entre CIE.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {repartitions.map((rep, i) => (
+                <div key={i} className="flex gap-3 items-center">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Nom de la compagnie (ex: ATLANTASANAD)"
+                      value={rep.compagneName}
+                      onChange={setRepartition(i, 'compagneName')}
+                      className="bg-muted/30 border-border focus:border-primary"
+                    />
+                  </div>
+                  <div className="w-32 flex items-center gap-1.5">
+                    <Input
+                      type="number" min="0" max="100" step="0.1"
+                      placeholder="0"
+                      value={rep.percent || ''}
+                      onChange={setRepartition(i, 'percent')}
+                      className="bg-muted/30 border-border focus:border-primary"
+                    />
+                    <span className="text-sm text-muted-foreground font-medium">%</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                    onClick={() => setRepartitions(r => r.filter((_, idx) => idx !== i))}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              ))}
+              {repartitions.length > 0 && Math.abs(totalRepartition - 100) > 0.01 && (
+                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg px-3 py-2 text-xs">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  La somme des pourcentages doit être égale à 100% (actuellement {totalRepartition.toFixed(1)}%)
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Form actions */}

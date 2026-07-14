@@ -17,5 +17,14 @@ public class ReglementRequest {
     private String category;
     private String numpolice;
     private double montantTotal;
+
+    /** N° Facture — invoice reference (N°FACTURE column in PROD A C / MARITIME A C) */
+    private String numFacture;
+
+    /** Paiements reçus du client (REGLER PAR LE CLIENT) */
     private List<PaymentRequest> payments;
+
+    /** Paiements versés à la compagnie (REGLER A LA CIE) */
+    private List<PaymentRequest> paymentscie;
 }
+
