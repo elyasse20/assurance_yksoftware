@@ -140,7 +140,7 @@ export default function EditOperationPage() {
 
   /* ── Répartitions ── */
   const setRepartition = (i: number, k: keyof CompagneRepartition) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setRepartitions(prev => {
         const next = [...prev];
         if (k === 'percent') {
@@ -367,12 +367,18 @@ export default function EditOperationPage() {
               {repartitions.map((rep, i) => (
                 <div key={i} className="flex gap-3 items-center">
                   <div className="flex-1">
-                    <Input
-                      placeholder="Nom de la compagnie (ex: ATLANTASANAD)"
+                    <StyledSelect
                       value={rep.compagneName}
                       onChange={setRepartition(i, 'compagneName')}
-                      className="bg-muted/30 border-border focus:border-primary"
-                    />
+                      required
+                    >
+                      <option value="" className="bg-card">-- Sélectionner une compagnie --</option>
+                      {compagnes.map(c => (
+                        <option key={c.id} value={c.compagneName} className="bg-card">
+                          {c.compagneName}
+                        </option>
+                      ))}
+                    </StyledSelect>
                   </div>
                   <div className="w-32 flex items-center gap-1.5">
                     <Input

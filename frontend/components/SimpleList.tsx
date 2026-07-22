@@ -18,19 +18,27 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+export interface ExtraField {
+  key: string;
+  label: string;
+  type?: 'text' | 'number' | 'select';
+  options?: string[];
+}
+
 interface SimpleItem { id: string; name: string; [key: string]: any; }
 
 interface Props {
   title: string;
+  itemLabel?: string;
   endpoint: string;
   icon?: React.ReactNode;
-  extraFields?: { key: string; label: string; type?: string }[];
+  extraFields?: ExtraField[];
 }
 
 /**
  * Modernized reusable CRUD list for simple lookup items (Nature, Category, Parametre, TVA).
  */
-export default function SimpleList({ title, endpoint, icon, extraFields = [] }: Props) {
+export default function SimpleList({ title, itemLabel, endpoint, icon, extraFields = [] }: Props) {
   const [items, setItems] = useState<SimpleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,7 +62,15 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
     e.preventDefault();
     setError('');
     try {
-      await api.post(`/${endpoint}`, { name: newName, ...newExtra });
+      const extraPayload: Record<string, any> = {};
+      extraFields.forEach(f => {
+        if (f.type === 'select') {
+          extraPayload[f.key] = newExtra[f.key] || f.options?.[0] || '';
+        } else {
+          extraPayload[f.key] = newExtra[f.key] ?? '';
+        }
+      });
+      await api.post(`/${endpoint}`, { name: newName, ...extraPayload });
       setNewName('');
       setNewExtra({});
       fetchAll();
@@ -67,7 +83,9 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
     setEditingId(item.id);
     setSaveError('');
     const vals: Record<string, string> = { name: item.name };
-    extraFields.forEach(f => { vals[f.key] = String(item[f.key] ?? ''); });
+    extraFields.forEach(f => {
+      vals[f.key] = String(item[f.key] ?? (f.type === 'select' ? f.options?.[0] : ''));
+    });
     setEditValues(vals);
   };
 
@@ -128,7 +146,7 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
               type="text"
               value={newName}
               onChange={e => setNewName(e.target.value)}
-              placeholder={`Nom du ${title.toLowerCase()}...`}
+              placeholder={`Nom du ${itemLabel || title.toLowerCase()}...`}
               required
               className="bg-muted/30 border-border focus:border-primary"
             />
@@ -136,14 +154,27 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
           {extraFields.map(f => (
             <div key={f.key} className="min-w-[140px]">
               <Label htmlFor={`new-${f.key}`} className="sr-only">{f.label}</Label>
-              <Input
-                id={`new-${f.key}`}
-                type={f.type ?? 'text'}
-                value={newExtra[f.key] ?? ''}
-                onChange={e => setNewExtra(p => ({ ...p, [f.key]: e.target.value }))}
-                placeholder={f.label}
-                className="bg-muted/30 border-border focus:border-primary"
-              />
+              {f.type === 'select' ? (
+                <select
+                  id={`new-${f.key}`}
+                  value={newExtra[f.key] ?? f.options?.[0] ?? ''}
+                  onChange={e => setNewExtra(p => ({ ...p, [f.key]: e.target.value }))}
+                  className="flex h-9 w-full rounded-lg border border-input bg-muted/30 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground"
+                >
+                  {f.options?.map(opt => (
+                    <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  id={`new-${f.key}`}
+                  type={f.type ?? 'text'}
+                  value={newExtra[f.key] ?? ''}
+                  onChange={e => setNewExtra(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.label}
+                  className="bg-muted/30 border-border focus:border-primary"
+                />
+              )}
             </div>
           ))}
           <Button type="submit" className="gap-2 shadow-sm shadow-primary/20">
@@ -212,14 +243,28 @@ export default function SimpleList({ title, endpoint, icon, extraFields = [] }: 
                   {extraFields.map(f => (
                     <TableCell key={f.key}>
                       {editingId === item.id ? (
-                        <Input
-                          type={f.type ?? 'text'}
-                          value={editValues[f.key] ?? ''}
-                          onChange={e => setEditValues(p => ({ ...p, [f.key]: e.target.value }))}
-                          className="bg-muted/40 border-border focus:border-primary h-8 text-sm w-24"
-                        />
+                        f.type === 'select' ? (
+                          <select
+                            value={editValues[f.key] ?? f.options?.[0] ?? ''}
+                            onChange={e => setEditValues(p => ({ ...p, [f.key]: e.target.value }))}
+                            className="flex h-8 w-full rounded-lg border border-input bg-muted/40 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground min-w-[120px]"
+                          >
+                            {f.options?.map(opt => (
+                              <option key={opt} value={opt} className="bg-card text-foreground">{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            type={f.type ?? 'text'}
+                            value={editValues[f.key] ?? ''}
+                            onChange={e => setEditValues(p => ({ ...p, [f.key]: e.target.value }))}
+                            className="bg-muted/40 border-border focus:border-primary h-8 text-sm w-24"
+                          />
+                        )
                       ) : (
-                        <span className="text-sm text-muted-foreground">{item[f.key]}</span>
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {item[f.key] !== undefined && item[f.key] !== null && item[f.key] !== '' ? String(item[f.key]) : '-'}
+                        </span>
                       )}
                     </TableCell>
                   ))}

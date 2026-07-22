@@ -57,20 +57,35 @@ public class LookupService {
     }
 
     // ─── Parametre ───────────────────────────────────────────────────────────────
-    public List<Parametre> getAllParametres() { return parametreRepository.findAll(); }
+    public List<Parametre> getAllParametres() {
+        List<Parametre> list = parametreRepository.findAll();
+        for (Parametre p : list) {
+            if (p.getType() == null || p.getType().isBlank()) {
+                p.setType("NUMBER");
+            }
+            if (p.getValue() == null) {
+                p.setValue("0");
+            }
+        }
+        return list;
+    }
+
     public Parametre createParametre(SimpleItemRequest req) {
         return parametreRepository.save(Parametre.builder()
                 .name(req.getName())
-                .value(req.getValue())
-                .type(req.getType() != null ? req.getType() : "text")
+                .value(req.getValue() != null ? req.getValue() : "0")
+                .type(req.getType() != null && !req.getType().isBlank() ? req.getType() : "NUMBER")
                 .build());
     }
+
     public Parametre updateParametre(String id, SimpleItemRequest req) {
         Parametre p = parametreRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Parametre not found"));
         p.setName(req.getName());
-        p.setValue(req.getValue());
-        if (req.getType() != null) {
+        if (req.getValue() != null) {
+            p.setValue(req.getValue());
+        }
+        if (req.getType() != null && !req.getType().isBlank()) {
             p.setType(req.getType());
         }
         return parametreRepository.save(p);
