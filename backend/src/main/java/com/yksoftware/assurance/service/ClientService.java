@@ -47,10 +47,11 @@ public class ClientService {
 
         String docPath = null;
         if (file != null && !file.isEmpty()) {
+            validateFile(file);
             docPath = fileStorageService.store(file, "clients");
         }
         if (docPath == null) {
-            throw new IllegalArgumentException("Document file is required");
+            throw new IllegalArgumentException("Le document justificatif est obligatoire");
         }
 
         Client client = Client.builder()
@@ -81,6 +82,7 @@ public class ClientService {
         existing.setCredit(req.getCredit());
 
         if (file != null && !file.isEmpty()) {
+            validateFile(file);
             // Optionally delete old file
             fileStorageService.delete(existing.getDoc());
             existing.setDoc(fileStorageService.store(file, "clients"));
@@ -100,18 +102,51 @@ public class ClientService {
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
     private void validateRequest(ClientRequest req, boolean isCreate) {
-        if (req.getNom() == null || req.getTel() == null || req.getAdresse() == null) {
-            throw new IllegalArgumentException("Missing required fields: nom, tel, adresse, type");
+        if (req.getNom() == null || req.getNom().isBlank() ||
+            req.getTel() == null || req.getTel().isBlank() ||
+            req.getAdresse() == null || req.getAdresse().isBlank()) {
+            throw new IllegalArgumentException("Les champs nom, téléphone et adresse sont obligatoires");
         }
+
+        if (req.getBudget() < 0) {
+            throw new IllegalArgumentException("Le budget ne peut pas être négatif");
+        }
+        if (req.getCredit() < 0) {
+            throw new IllegalArgumentException("Le crédit ne peut pas être négatif");
+        }
+
         if (req.getType() == Client.ClientType.particulier) {
-            if (req.getCin() == null || req.getPrenom() == null) {
-                throw new IllegalArgumentException("For particulier: cin and prenom are required");
+            if (req.getCin() == null || req.getCin().isBlank() ||
+                req.getPrenom() == null || req.getPrenom().isBlank()) {
+                throw new IllegalArgumentException("Pour un particulier, le prénom et le CIN sont obligatoires");
             }
         }
+
         if (req.getType() == Client.ClientType.societe) {
-            if (req.getIce() == null || req.getIdentifiantFiscal() == null || req.getRc() == null) {
-                throw new IllegalArgumentException("For societe: ice, if, and rc are required");
+            if (req.getIce() == null || req.getIce().isBlank() ||
+                req.getIdentifiantFiscal() == null || req.getIdentifiantFiscal().isBlank() ||
+                req.getRc() == null || req.getRc().isBlank()) {
+                throw new IllegalArgumentException("Pour une société, l'ICE, l'Identifiant Fiscal et le RC sont obligatoires");
             }
+            String iceTrimmed = req.getIce().trim();
+            if (!iceTrimmed.matches("^\\d{15}$")) {
+                throw new IllegalArgumentException("L'ICE doit comporter exactement 15 chiffres numériques (ex: 001234567890123)");
+            }
+        }
+    }
+
+    private void validateFile(MultipartFile file) {
+        long maxSize = 5 * 1024 * 1024; // 5 MB
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException("Le fichier ne doit pas dépasser 5 MB");
+        }
+        String originalFilename = file.getOriginalFilename();
+        String ext = originalFilename != null && originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase()
+                : "";
+        List<String> allowedExtensions = List.of(".pdf", ".jpg", ".jpeg", ".png");
+        if (!allowedExtensions.contains(ext)) {
+            throw new IllegalArgumentException("Format de fichier non autorisé. Formats acceptés : .pdf, .jpg, .jpeg, .png");
         }
     }
 

@@ -1,8 +1,10 @@
 package com.yksoftware.assurance.dto;
 
 import com.yksoftware.assurance.model.Client.ClientType;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 /**
@@ -28,10 +30,15 @@ public class ClientRequest {
     @NotBlank
     private String adresse;
 
-    private String ice;                 // required if type = societe
+    @Pattern(regexp = "^$|^\\d{15}$", message = "L'ICE doit comporter exactement 15 chiffres numériques")
+    private String ice;                 // required if type = societe (15 digits)
+
     private String identifiantFiscal;   // maps to 'if' in MongoDB
     private String rc;                  // required if type = societe
 
+    @Min(value = 0, message = "Le budget ne peut pas être négatif")
     private double budget;
+
+    @Min(value = 0, message = "Le crédit ne peut pas être négatif")
     private double credit;
 }

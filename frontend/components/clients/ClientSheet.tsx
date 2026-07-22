@@ -54,16 +54,54 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
     onOpenChange(v);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+    if (selected.size > 5 * 1024 * 1024) {
+      setError("Le fichier ne doit pas dépasser 5 MB");
+      setFile(null);
+      e.target.value = '';
+      return;
+    }
+    const ext = selected.name.split('.').pop()?.toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+      setError("Format de fichier non autorisé. Formats acceptés : .pdf, .jpg, .jpeg, .png");
+      setFile(null);
+      e.target.value = '';
+      return;
+    }
+    setError('');
+    setFile(selected);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Frontend validations
+    if (type === 'societe') {
+      const iceTrimmed = form.ice.trim();
+      if (!/^\d{15}$/.test(iceTrimmed)) {
+        setError("L'ICE doit comporter exactement 15 chiffres numériques (ex: 001234567890123)");
+        return;
+      }
+    }
+
+    if (Number(form.budget) < 0 || Number(form.credit) < 0) {
+      setError("Le budget et le crédit ne peuvent pas être négatifs");
+      return;
+    }
+
     setSaving(true);
     try {
       const data: Record<string, any> = {
         ...form,
         type,
-        budget: +form.budget,
-        credit: +form.credit,
+        budget: Math.max(0, +form.budget),
+        credit: Math.max(0, +form.credit),
       };
       const fd = new FormData();
       const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -174,7 +212,16 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Informations légales
                   </p>
-                  <FieldRow label="ICE (15 chiffres)" id="ice" value={form.ice} onChange={set('ice')} required placeholder="000000000000000" />
+                  <FieldRow
+                    label="ICE (15 chiffres)"
+                    id="ice"
+                    value={form.ice}
+                    onChange={set('ice')}
+                    required
+                    placeholder="000000000000000"
+                    maxLength={15}
+                    pattern="^\d{15}$"
+                  />
                   <FieldRow label="Identifiant Fiscal" id="if" value={form.identifiantFiscal} onChange={set('identifiantFiscal')} required placeholder="Identifiant fiscal" />
                   <FieldRow label="RC" id="rc" value={form.rc} onChange={set('rc')} required placeholder="Registre de commerce" />
                 </div>
@@ -189,8 +236,8 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
                 Situation financière
               </p>
               <div className="grid grid-cols-2 gap-4">
-                <FieldRow label="Budget (DH)" id="budget" type="number" value={form.budget} onChange={set('budget')} placeholder="0" />
-                <FieldRow label="Crédit (DH)" id="credit" type="number" value={form.credit} onChange={set('credit')} placeholder="0" />
+                <FieldRow label="Budget (DH)" id="budget" type="number" min="0" value={form.budget} onChange={set('budget')} placeholder="0" />
+                <FieldRow label="Crédit (DH)" id="credit" type="number" min="0" value={form.credit} onChange={set('credit')} placeholder="0" />
               </div>
             </div>
 
@@ -230,7 +277,7 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
                   type="file"
                   className="hidden"
                   accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={e => setFile(e.target.files?.[0] ?? null)}
+                  onChange={handleFileChange}
                 />
               </label>
             </div>
@@ -265,11 +312,12 @@ export function ClientSheet({ open, onOpenChange, onCreated }: ClientSheetProps)
 
 /* ── Sub-component ─────────────────────────────────────────────────────────── */
 function FieldRow({
-  label, id, value, onChange, required = false, type = 'text', placeholder,
+  label, id, value, onChange, required = false, type = 'text', placeholder, maxLength, pattern, min,
 }: {
   label: string; id: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean; type?: string; placeholder?: string;
+  maxLength?: number; pattern?: string; min?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -281,6 +329,9 @@ function FieldRow({
         onChange={onChange}
         required={required}
         placeholder={placeholder}
+        maxLength={maxLength}
+        pattern={pattern}
+        min={min}
         className="bg-muted/30 border-border focus:border-primary"
       />
     </div>
