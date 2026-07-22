@@ -6,9 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 /**
- * GET /api/dashboard/stats
- * Returns all KPI data needed by the frontend dashboard in one call.
+ * GET /api/dashboard/stats?exercice=2026
+ * Returns all KPI data filtered by accounting exercise in one call.
  */
 @RestController
 @RequestMapping("/api/dashboard")
@@ -18,7 +20,8 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/stats")
-    public ResponseEntity<DashboardStats> getStats() {
-        return ResponseEntity.ok(dashboardService.getStats());
+    public ResponseEntity<DashboardStats> getStats(@RequestParam(required = false) Integer exercice) {
+        int targetExercice = (exercice != null && exercice > 1900) ? exercice : LocalDate.now().getYear();
+        return ResponseEntity.ok(dashboardService.getStats(targetExercice));
     }
 }

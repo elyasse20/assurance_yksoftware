@@ -28,14 +28,28 @@ public class DashboardService {
     private final ClientRepository clientRepository;
 
     public DashboardStats getStats() {
-        List<Production> productions = productionRepository.findAll();
-        List<Reglement> regelements = reglementRepository.findAll();
+        return getStats(java.time.LocalDate.now().getYear());
+    }
+
+    public DashboardStats getStats(int exercice) {
+        List<Production> allProductions = productionRepository.findAll();
+        List<Reglement> allReglements = reglementRepository.findAll();
         long totalClients = clientRepository.count();
+
+        // Filter productions by exercice
+        List<Production> productions = allProductions.stream()
+                .filter(p -> p.getExercice() != null && p.getExercice().equals(exercice))
+                .collect(Collectors.toList());
+
+        // Filter reglements by exercice
+        List<Reglement> regelements = allReglements.stream()
+                .filter(r -> r.getExercice() != null && r.getExercice().equals(exercice))
+                .collect(Collectors.toList());
 
         // ── Montants ──────────────────────────────────────────────────────────
         double montantTotal = productions.stream()
                 .mapToDouble(Production::getMontantTotal)
-                .sum();
+        .sum();
 
         double montantRegle = regelements.stream()
                 .flatMap(r -> {
@@ -44,7 +58,6 @@ public class DashboardService {
                 })
                 .mapToDouble(Payment::getMontant)
                 .sum();
-
 
         double montantRestant = Math.max(0, montantTotal - montantRegle);
 
@@ -82,40 +95,47 @@ public class DashboardService {
                 .limit(8)
                 .collect(Collectors.toList());
 
-        // ── By Month (last 12 months) ─────────────────────────────────────────
-        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("yyyy-MM");
-        Map<String, Long> byMonth = productions.stream()
-                .filter(p -> p.getCreatedAt() != null)
-                .collect(Collectors.groupingBy(
-                        p -> p.getCreatedAt().toLocalDate().format(monthFmt),
-                        Collectors.counting()
-                ));
+        // ── By Month (12 months of the selected exercice year YYYY-01 to YYYY-12) ──
+        Map<String, Long> byMonthMap = new HashMap<>();
+        for (Production p : productions) {
+            String monthKey = null;
+            if (p.getMoisDem() != null && p.getMoisDem().length() >= 7) {
+                monthKey = p.getMoisDem().substring(0, 7); // e.g. "2026-01"
+            } else if (p.getDateEff() != null) {
+                monthKey = String.format("%04d-%02d", p.getDateEff().getYear(), p.getDateEff().getMonthValue());
+            } else if (p.getCreatedAt() != null) {
+                monthKey = String.format("%04d-%02d", p.getCreatedAt().getYear(), p.getCreatedAt().getMonthValue());
+            }
+            if (monthKey != null) {
+                byMonthMap.put(monthKey, byMonthMap.getOrDefault(monthKey, 0L) + 1);
+            }
+        }
 
-        // Ensure last 12 months are all present (fill zeros)
-        java.time.LocalDate now = java.time.LocalDate.now();
         List<DashboardStats.LabelValue> monthStats = new ArrayList<>();
-        for (int i = 11; i >= 0; i--) {
-            java.time.LocalDate m = now.minusMonths(i).withDayOfMonth(1);
-            String key = m.format(monthFmt);
+        for (int m = 1; m <= 12; m++) {
+            String key = String.format("%04d-%02d", exercice, m);
             monthStats.add(DashboardStats.LabelValue.builder()
                     .label(key)
-                    .value(byMonth.getOrDefault(key, 0L))
+                    .value(byMonthMap.getOrDefault(key, 0L))
                     .build());
         }
 
-        // ── Recent productions (last 5) ───────────────────────────────────────
-        // Build a map productionId → reglementStatus for quick lookup
+        // ── Recent productions (last 5 for this exercice) ───────────────────────
         Map<String, String> reglementStatusByProdId = regelements.stream()
                 .filter(r -> r.getProduction() != null)
                 .collect(Collectors.toMap(
                         r -> r.getProduction().getId(),
                         r -> r.getStatus().name(),
-                        (a, b) -> a // keep first in case of duplicate
+                        (a, b) -> a
                 ));
 
         List<DashboardStats.RecentProduction> recentProductions = productions.stream()
-                .filter(p -> p.getCreatedAt() != null)
-                .sorted(Comparator.comparing(Production::getCreatedAt).reversed())
+                .sorted((p1, p2) -> {
+                    if (p1.getCreatedAt() != null && p2.getCreatedAt() != null) {
+                        return p2.getCreatedAt().compareTo(p1.getCreatedAt());
+                    }
+                    return 0;
+                })
                 .limit(5)
                 .map(p -> DashboardStats.RecentProduction.builder()
                         .id(p.getId())

@@ -20,8 +20,8 @@ public class ProductionController {
     private final ProductionService productionService;
 
     @GetMapping
-    public List<Production> getAll() {
-        return productionService.getAll();
+    public List<Production> getAll(@RequestParam(required = false) Integer exercice) {
+        return productionService.getAll(exercice);
     }
 
     @GetMapping("/{id}")

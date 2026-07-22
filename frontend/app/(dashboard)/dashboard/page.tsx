@@ -11,6 +11,7 @@ import { formatAmount, formatDate, formatMonthLabel } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import ExerciceSelector from '@/components/ExerciceSelector';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface CategoryStat { category: string; count: number; montant: number; }
@@ -199,16 +200,18 @@ function MonthlyBarChart({ data }: { data: LabelValue[] }) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [exercice, setExercice] = useState<number>(new Date().getFullYear());
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get<DashboardStats>('/dashboard/stats')
+    setLoading(true);
+    api.get<DashboardStats>('/dashboard/stats', { params: { exercice } })
       .then(r => setStats(r.data))
       .catch(() => setError('Erreur lors du chargement des statistiques'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [exercice]);
 
   const maxMonth = stats ? Math.max(...stats.byMonth.map(d => d.value), 1) : 1;
   const maxCompagne = stats ? Math.max(...stats.byCompagne.map(d => d.value), 1) : 1;
@@ -220,16 +223,22 @@ export default function DashboardPage() {
   return (
     <div className="space-y-10">
       {/* Page header */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-            <BarChart2 className="w-5 h-5 text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <BarChart2 className="w-5 h-5 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Tableau de bord</h1>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tableau de bord</h1>
+          <p className="text-sm text-muted-foreground pl-12">
+            Vue d'ensemble de l'activité — Exercice {exercice}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground pl-12">
-          Vue d'ensemble de l'activité — {new Date().toLocaleDateString('fr-MA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
+        <ExerciceSelector
+          selectedExercice={exercice}
+          onExerciceChange={setExercice}
+        />
       </div>
 
       {error && (
@@ -243,7 +252,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
         <KpiCard loading={loading} label="Opérations" icon={FileText}
           value={loading ? '…' : String(stats?.totalProductions ?? 0)}
-          sub="polices enregistrées"
+          sub={`exercice ${exercice}`}
           color="from-blue-500/20 to-blue-600/5" />
         <KpiCard loading={loading} label="Revenu Total" icon={TrendingUp}
           value={loading ? '…' : formatAmount(stats?.montantTotal ?? 0)}
@@ -271,11 +280,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Productions par mois</h2>
-              <p className="text-xs text-muted-foreground">12 derniers mois</p>
+              <p className="text-xs text-muted-foreground">Exercice {exercice} (janv. à déc.)</p>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />Mois courant
-              <span className="w-2.5 h-2.5 rounded-sm bg-muted inline-block ml-2" />Mois précédents
+              <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />Mois émis
             </div>
           </div>
           {loading ? (

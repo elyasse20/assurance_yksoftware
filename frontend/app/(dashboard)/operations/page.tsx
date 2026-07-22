@@ -11,6 +11,7 @@ import api from '@/lib/api';
 import { Production, Compagne, Category } from '@/types';
 import { formatMoisDem, formatAmount } from '@/lib/format';
 import { exportToCSV, exportToPDF, ExportColumn } from '@/lib/export';
+import ExerciceSelector from '@/components/ExerciceSelector';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,6 +110,7 @@ export default function OperationsPage() {
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
+  const [filterExercice, setFilterExercice] = useState<number>(new Date().getFullYear());
   const [filterCategory, setFilterCategory] = useState('');
   const [filterCompagne, setFilterCompagne] = useState('');
   const [filterMonth, setFilterMonth] = useState('');   // format "YYYY-MM"
@@ -138,6 +140,11 @@ export default function OperationsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return productions.filter(prod => {
+      // Exercice filter
+      if (filterExercice > 0) {
+        const prodYear = prod.moisDem?.slice(0, 4) || prod.dateEff?.slice(0, 4);
+        if (prodYear && prodYear !== String(filterExercice)) return false;
+      }
       if (q && !(
         prod.numpolice?.toLowerCase().includes(q) ||
         prod.client?.toLowerCase().includes(q) ||
@@ -146,13 +153,12 @@ export default function OperationsPage() {
       if (filterCategory && prod.category !== filterCategory) return false;
       if (filterCompagne && prod.compagne !== filterCompagne) return false;
       if (filterMonth) {
-        // moisDem is stored as ISO date "YYYY-MM-DD" or "YYYY-MM"
         const mois = prod.moisDem ?? '';
         if (!mois.startsWith(filterMonth)) return false;
       }
       return true;
     });
-  }, [productions, search, filterCategory, filterCompagne, filterMonth]);
+  }, [productions, search, filterExercice, filterCategory, filterCompagne, filterMonth]);
 
   const hasFilters = search || filterCategory || filterCompagne || filterMonth;
   const clearFilters = () => {
@@ -164,13 +170,16 @@ export default function OperationsPage() {
 
   // ── Export handlers ───────────────────────────────────────────────────────
   const handleExportCSV = () => {
-    exportToCSV(filtered.map(toExportRow), EXPORT_COLUMNS, 'operations');
+    const exTitle = filterExercice ? `operations_exercice_${filterExercice}` : 'operations_toutes';
+    exportToCSV(filtered.map(toExportRow), EXPORT_COLUMNS, exTitle);
   };
 
   const handleExportPDF = async () => {
     setExporting(true);
+    const title = filterExercice ? `Liste des Opérations — Exercice ${filterExercice}` : 'Liste des Opérations';
+    const exFilename = filterExercice ? `operations_exercice_${filterExercice}` : 'operations';
     try {
-      await exportToPDF(filtered.map(toExportRow), EXPORT_COLUMNS, 'Liste des Opérations', 'operations');
+      await exportToPDF(filtered.map(toExportRow), EXPORT_COLUMNS, title, exFilename);
     } finally { setExporting(false); }
   };
 
@@ -210,6 +219,10 @@ export default function OperationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          <ExerciceSelector
+            selectedExercice={filterExercice}
+            onExerciceChange={setFilterExercice}
+          />
           <Button variant="outline" size="icon" onClick={() => fetchData(true)} disabled={refreshing} className="h-9 w-9" title="Actualiser">
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>

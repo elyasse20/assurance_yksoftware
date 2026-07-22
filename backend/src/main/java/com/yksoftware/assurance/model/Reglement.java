@@ -92,6 +92,28 @@ public class Reglement {
         return paymentscie.stream().mapToDouble(Payment::getMontant).sum();
     }
 
+    /**
+     * Virtual exercice (year) derived from moisDem or dateEff or createdAt or production.
+     */
+    @org.springframework.data.annotation.Transient
+    public Integer getExercice() {
+        if (moisDem != null && moisDem.length() >= 4) {
+            try {
+                return Integer.parseInt(moisDem.substring(0, 4));
+            } catch (NumberFormatException ignored) {}
+        }
+        if (dateEff != null) {
+            return dateEff.getYear();
+        }
+        if (production != null && production.getExercice() != null) {
+            return production.getExercice();
+        }
+        if (createdAt != null) {
+            return createdAt.getYear();
+        }
+        return null;
+    }
+
     public enum ReglementStatus {
         EN_ATTENTE, PARTIEL, PAYE
     }

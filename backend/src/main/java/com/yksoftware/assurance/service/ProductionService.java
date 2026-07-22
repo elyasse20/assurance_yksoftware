@@ -24,7 +24,17 @@ public class ProductionService {
     private final ProductionRepository productionRepository;
 
     public List<Production> getAll() {
-        return productionRepository.findAll();
+        return getAll(null);
+    }
+
+    public List<Production> getAll(Integer exercice) {
+        List<Production> all = productionRepository.findAll();
+        if (exercice == null) {
+            return all;
+        }
+        return all.stream()
+                .filter(p -> p.getExercice() != null && p.getExercice().equals(exercice))
+                .collect(Collectors.toList());
     }
 
     public Production getById(String id) {

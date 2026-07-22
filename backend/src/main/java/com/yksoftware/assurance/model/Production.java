@@ -84,4 +84,24 @@ public class Production {
             p.getPrimes() + p.getTaxe() + p.getTaxepara() + p.getAccessoire() + p.getCnpc()
         ).sum();
     }
+
+    /**
+     * Virtual exercice (year) derived from moisDem (e.g. "2026-01" -> 2026)
+     * or dateEff year or createdAt year. Not persisted to MongoDB.
+     */
+    @org.springframework.data.annotation.Transient
+    public Integer getExercice() {
+        if (moisDem != null && moisDem.length() >= 4) {
+            try {
+                return Integer.parseInt(moisDem.substring(0, 4));
+            } catch (NumberFormatException ignored) {}
+        }
+        if (dateEff != null) {
+            return dateEff.getYear();
+        }
+        if (createdAt != null) {
+            return createdAt.getYear();
+        }
+        return null;
+    }
 }
