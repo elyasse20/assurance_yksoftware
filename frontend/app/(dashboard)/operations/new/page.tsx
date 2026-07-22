@@ -203,7 +203,7 @@ export default function NewOperationPage() {
               <StyledInput id="dateEff" type="date" value={form.dateEff} onChange={setF('dateEff')} required />
             </FieldRow>
             <FieldRow label="Mois de demande" id="moisDem">
-              <StyledInput id="moisDem" type="date" value={form.moisDem} onChange={setF('moisDem')} required />
+              <StyledInput id="moisDem" type="month" value={form.moisDem} onChange={setF('moisDem')} required />
             </FieldRow>
             <FieldRow label="Compagne" id="compagne">
               <StyledSelect id="compagne" value={form.compagne} onChange={setF('compagne')} required>

@@ -79,7 +79,7 @@ export default function EditOperationPage() {
         natureOperation: prod.natureOperation ?? '',
         client: prod.client ?? '',
         dateEff: prod.dateEff ? prod.dateEff.slice(0, 10) : '',
-        moisDem: prod.moisDem ? prod.moisDem.slice(0, 10) : '',
+        moisDem: prod.moisDem ? prod.moisDem.slice(0, 7) : '',
         compagne: prod.compagne ?? '',
         tvaRate: String(prod.tvaRate ?? 0),
         category: prod.category ?? '',
@@ -232,7 +232,7 @@ export default function EditOperationPage() {
               <StyledInput id="dateEff" type="date" value={form.dateEff} onChange={setF('dateEff')} required />
             </FieldRow>
             <FieldRow label="Mois de demande" id="moisDem">
-              <StyledInput id="moisDem" type="date" value={form.moisDem} onChange={setF('moisDem')} required />
+              <StyledInput id="moisDem" type="month" value={form.moisDem} onChange={setF('moisDem')} required />
             </FieldRow>
             <FieldRow label="Compagne" id="compagne">
               <StyledSelect id="compagne" value={form.compagne} onChange={setF('compagne')} required>
