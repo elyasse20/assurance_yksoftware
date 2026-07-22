@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, User, Building2, Upload, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Building2, Upload, Loader2, AlertCircle, X, FileCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { Client } from '@/types';
 import { cn } from '@/lib/utils';
@@ -14,16 +14,17 @@ import { Separator } from '@/components/ui/separator';
 
 type ClientType = 'particulier' | 'societe';
 
-function FieldRow({ label, id, value, onChange, required = false, type = 'text', placeholder }: {
+function FieldRow({ label, id, value, onChange, required = false, type = 'text', placeholder, maxLength, pattern, min }: {
   label: string; id: string; value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean; type?: string; placeholder?: string;
+  maxLength?: number; pattern?: string; min?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}{required && <span className="text-destructive ml-1">*</span>}</Label>
       <Input id={id} type={type} value={value} onChange={onChange} required={required}
-        placeholder={placeholder}
+        placeholder={placeholder} maxLength={maxLength} pattern={pattern} min={min}
         className="bg-muted/30 border-border focus:border-primary" />
     </div>
   );
@@ -37,11 +38,13 @@ export default function EditClientPage() {
   const [error, setError] = useState('');
   const [type, setType] = useState<ClientType>('particulier');
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [form, setForm] = useState({
     nom: '', prenom: '', cin: '', tel: '', adresse: '',
     ice: '', identifiantFiscal: '', rc: '',
     budget: '0', credit: '0',
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.get<Client>(`/clients/${id}`).then(({ data }) => {
@@ -58,10 +61,72 @@ export default function EditClientPage() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
+  const processFile = (selected: File) => {
+    if (selected.size > 5 * 1024 * 1024) {
+      setError("Le fichier ne doit pas dépasser 5 MB");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    const ext = selected.name.split('.').pop()?.toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+      setError("Format de fichier non autorisé. Formats acceptés : .pdf, .jpg, .jpeg, .png");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setError('');
+    setFile(selected);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) { setFile(null); return; }
+    processFile(selected);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) processFile(dropped);
+  };
+
+  const handleRemoveFile = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation(); setFile(null); setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setSaving(true);
+    e.preventDefault(); setError('');
+
+    if (type === 'societe') {
+      const iceTrimmed = form.ice.trim();
+      if (!/^\d{15}$/.test(iceTrimmed)) {
+        setError("L'ICE doit comporter exactement 15 chiffres numériques (ex: 001234567890123)");
+        return;
+      }
+    }
+
+    if (Number(form.budget) < 0 || Number(form.credit) < 0) {
+      setError("Le budget et le crédit ne peuvent pas être négatifs");
+      return;
+    }
+
+    setSaving(true);
     try {
-      const data: Record<string, any> = { ...form, type, budget: +form.budget, credit: +form.credit };
+      const data: Record<string, any> = {
+        ...form, type,
+        budget: Math.max(0, +form.budget),
+        credit: Math.max(0, +form.credit),
+      };
       const fd = new FormData();
       const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       fd.append('data', jsonBlob);
@@ -150,7 +215,7 @@ export default function EditClientPage() {
             <Separator />
             <div className="space-y-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Informations légales</p>
-              <FieldRow label="ICE (15 chiffres)" id="ice" value={form.ice} onChange={set('ice')} required />
+              <FieldRow label="ICE (15 chiffres)" id="ice" value={form.ice} onChange={set('ice')} required maxLength={15} pattern="^\d{15}$" placeholder="000000000000000" />
               <FieldRow label="Identifiant Fiscal" id="if" value={form.identifiantFiscal} onChange={set('identifiantFiscal')} required />
               <FieldRow label="RC" id="rc" value={form.rc} onChange={set('rc')} required />
             </div>
@@ -162,8 +227,8 @@ export default function EditClientPage() {
         <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Situation financière</p>
           <div className="grid grid-cols-2 gap-4">
-            <FieldRow label="Budget (DH)" id="budget" type="number" value={form.budget} onChange={set('budget')} />
-            <FieldRow label="Crédit (DH)" id="credit" type="number" value={form.credit} onChange={set('credit')} />
+            <FieldRow label="Budget (DH)" id="budget" type="number" min="0" value={form.budget} onChange={set('budget')} />
+            <FieldRow label="Crédit (DH)" id="credit" type="number" min="0" value={form.credit} onChange={set('credit')} />
           </div>
         </div>
 
@@ -172,25 +237,73 @@ export default function EditClientPage() {
         {/* Document upload */}
         <div className="space-y-2">
           <Label>Nouveau document (optionnel)</Label>
-          <label className={cn(
-            'flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 cursor-pointer transition-all duration-200',
-            file ? 'border-primary/50 bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/30'
-          )}>
-            <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', file ? 'bg-primary/20' : 'bg-muted')}>
-              <Upload className={cn('w-4 h-4', file ? 'text-primary' : 'text-muted-foreground')} />
-            </div>
-            <div className="flex-1 min-w-0">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'relative flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 cursor-pointer transition-all duration-200 select-none',
+              isDragging
+                ? 'border-primary bg-primary/10 ring-4 ring-primary/10 scale-[1.01] shadow-lg'
+                : file
+                ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
+                : 'border-border hover:border-primary/40 hover:bg-muted/30'
+            )}
+          >
+            <div className={cn(
+              'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors',
+              isDragging || file ? 'bg-primary/20' : 'bg-muted'
+            )}>
               {file ? (
-                <><p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p></>
+                <FileCheck className="w-4 h-4 text-primary" />
               ) : (
-                <><p className="text-sm font-medium text-muted-foreground">Conserver ou changer le fichier...</p>
-                  <p className="text-xs text-muted-foreground/60">PDF, JPG, PNG</p></>
+                <Upload className={cn('w-4 h-4', isDragging ? 'text-primary animate-bounce' : 'text-muted-foreground')} />
               )}
             </div>
-            <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
-              onChange={e => setFile(e.target.files?.[0] ?? null)} />
-          </label>
+
+            <div className="flex-1 min-w-0">
+              {file ? (
+                <>
+                  <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB • Cliquez pour changer</p>
+                </>
+              ) : isDragging ? (
+                <>
+                  <p className="text-sm font-semibold text-primary">Déposez votre fichier ici</p>
+                  <p className="text-xs text-primary/70">Relâchez la souris pour importer</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Conserver ou <span className="text-primary font-semibold">changer le fichier</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">PDF, JPG, PNG • Max 5 MB</p>
+                </>
+              )}
+            </div>
+
+            {file && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleRemoveFile}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg flex-shrink-0 transition-colors"
+                title="Supprimer ou changer le fichier"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+            />
+          </div>
         </div>
 
         {/* Actions */}

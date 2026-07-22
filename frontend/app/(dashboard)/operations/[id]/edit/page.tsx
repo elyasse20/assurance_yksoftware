@@ -122,11 +122,17 @@ export default function EditOperationPage() {
   const setParam = (i: number, k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setParams(prev => {
       const next = [...prev];
-      const val = k === 'name' ? e.target.value : +e.target.value;
-      (next[i] as any)[k] = val;
+      if (k === 'name') {
+        (next[i] as any)[k] = e.target.value;
+      } else {
+        const raw = e.target.value.replace(/^0+(?=\d)/, '');
+        (next[i] as any)[k] = raw === '' ? 0 : Number(raw);
+      }
+
       if (k === 'primes') {
         const rate = getCommissionRate(form.category);
-        next[i].commission = Number((Number(val) * rate).toFixed(2));
+        const primesVal = (next[i] as any).primes;
+        next[i].commission = Number((Number(primesVal) * rate).toFixed(2));
       }
       return next;
     });
@@ -137,7 +143,12 @@ export default function EditOperationPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setRepartitions(prev => {
         const next = [...prev];
-        (next[i] as any)[k] = k === 'percent' ? +e.target.value : e.target.value;
+        if (k === 'percent') {
+          const raw = e.target.value.replace(/^0+(?=\d)/, '');
+          (next[i] as any)[k] = raw === '' ? 0 : Number(raw);
+        } else {
+          (next[i] as any)[k] = e.target.value;
+        }
         return next;
       });
     };
@@ -302,14 +313,14 @@ export default function EditOperationPage() {
                     </td>
                     {(['primes', 'taxe', 'taxepara', 'accessoire', 'cnpc'] as const).map(k => (
                       <td key={k} className="py-3 pr-3">
-                        <Input type="number" min="0" step="0.01"
-                          value={(param as any)[k]} onChange={setParam(i, k)}
+                        <Input type="number" min="0" step="0.01" placeholder="0"
+                          value={(param as any)[k] === 0 ? '' : (param as any)[k]} onChange={setParam(i, k)}
                           className="bg-muted/30 border-border focus:border-primary w-24 h-9" />
                       </td>
                     ))}
                     <td className="py-3 pr-3">
-                      <Input type="number" min="0" step="0.01" readOnly
-                        value={param.commission}
+                      <Input type="number" min="0" step="0.01" readOnly placeholder="0"
+                        value={param.commission === 0 ? '' : param.commission}
                         className="bg-muted/10 border-border text-muted-foreground w-24 h-9 cursor-not-allowed" />
                     </td>
                     <td className="py-3">

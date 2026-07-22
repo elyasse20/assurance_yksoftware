@@ -1,19 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, User, Building2, Upload, Loader2, AlertCircle, X, FileCheck } from 'lucide-react';
 import api from '@/lib/api';
 import { Client } from '@/types';
-import { FiArrowLeft, FiUpload } from 'react-icons/fi';
+import { cn } from '@/lib/utils';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 type ClientType = 'particulier' | 'societe';
+
+function FieldRow({ label, id, value, onChange, required = false, type = 'text', placeholder, maxLength, pattern, min }: {
+  label: string; id: string; value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean; type?: string; placeholder?: string;
+  maxLength?: number; pattern?: string; min?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}{required && <span className="text-destructive ml-1">*</span>}</Label>
+      <Input id={id} type={type} value={value} onChange={onChange} required={required}
+        placeholder={placeholder} maxLength={maxLength} pattern={pattern} min={min}
+        className="bg-muted/30 border-border focus:border-primary" />
+    </div>
+  );
+}
 
 export default function NewClientPage() {
   const router = useRouter();
   const [type, setType] = useState<ClientType>('particulier');
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     nom: '', prenom: '', cin: '', tel: '', adresse: '',
@@ -24,12 +48,73 @@ export default function NewClientPage() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
+  const processFile = (selected: File) => {
+    if (selected.size > 5 * 1024 * 1024) {
+      setError("Le fichier ne doit pas dépasser 5 MB");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    const ext = selected.name.split('.').pop()?.toLowerCase();
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(ext || '')) {
+      setError("Format de fichier non autorisé. Formats acceptés : .pdf, .jpg, .jpeg, .png");
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setError('');
+    setFile(selected);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) { setFile(null); return; }
+    processFile(selected);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) processFile(dropped);
+  };
+
+  const handleRemoveFile = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation(); setFile(null); setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (type === 'societe') {
+      const iceTrimmed = form.ice.trim();
+      if (!/^\d{15}$/.test(iceTrimmed)) {
+        setError("L'ICE doit comporter exactement 15 chiffres numériques (ex: 001234567890123)");
+        return;
+      }
+    }
+
+    if (Number(form.budget) < 0 || Number(form.credit) < 0) {
+      setError("Le budget et le crédit ne peuvent pas être négatifs");
+      return;
+    }
+
     setSaving(true);
     try {
-      const data: Record<string, any> = { ...form, type, budget: +form.budget, credit: +form.credit };
+      const data: Record<string, any> = {
+        ...form, type,
+        budget: Math.max(0, +form.budget),
+        credit: Math.max(0, +form.credit),
+      };
       const fd = new FormData();
       const jsonBlob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       fd.append('data', jsonBlob);
@@ -45,112 +130,176 @@ export default function NewClientPage() {
   };
 
   return (
-    <div className="max-w-2xl">
-      <div className="flex items-center gap-3 mb-8">
-        <button onClick={() => router.back()}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition">
-          <FiArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-white">Nouveau client</h1>
-          <p className="text-slate-400 text-sm">Remplissez les informations du client</p>
+    <div className="max-w-2xl space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <User className="w-4 h-4 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Nouveau client</h1>
+          </div>
+          <p className="text-sm text-muted-foreground pl-10">Remplissez les informations du client</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6">
+      <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card shadow-sm p-8 space-y-6">
         {error && (
-          <div className="bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-red-400 rounded-xl px-4 py-3 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
         )}
 
         {/* Type selector */}
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Type de client</label>
-          <div className="flex gap-3">
+        <div className="space-y-2">
+          <Label>Type de client</Label>
+          <div className="grid grid-cols-2 gap-3">
             {(['particulier', 'societe'] as ClientType[]).map(t => (
-              <button
-                key={t} type="button" onClick={() => setType(t)}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border transition
-                  ${type === t
-                    ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                  }`}
-              >
-                {t === 'particulier' ? '👤 Particulier' : '🏢 Société'}
+              <button key={t} type="button" onClick={() => setType(t)}
+                className={cn(
+                  'flex items-center gap-2.5 py-3 px-4 rounded-xl text-sm font-medium border-2 transition-all duration-200',
+                  type === t
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-muted/30 text-muted-foreground hover:border-border/80 hover:text-foreground'
+                )}>
+                {t === 'particulier' ? <User className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                {t === 'particulier' ? 'Particulier' : 'Société'}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Common fields */}
-        <Field label="Nom" id="nom" value={form.nom} onChange={set('nom')} required />
-        <Field label="Téléphone" id="tel" value={form.tel} onChange={set('tel')} required />
-        <Field label="Adresse" id="adresse" value={form.adresse} onChange={set('adresse')} required />
+        <Separator />
 
-        {/* Particulier fields */}
+        {/* Common fields */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Informations générales</p>
+          <FieldRow label="Nom" id="nom" value={form.nom} onChange={set('nom')} required placeholder="Nom du client" />
+          <FieldRow label="Téléphone" id="tel" value={form.tel} onChange={set('tel')} required placeholder="+212 6XX XXX XXX" />
+          <FieldRow label="Adresse" id="adresse" value={form.adresse} onChange={set('adresse')} required placeholder="Adresse complète" />
+        </div>
+
         {type === 'particulier' && (
           <>
-            <Field label="Prénom" id="prenom" value={form.prenom} onChange={set('prenom')} required />
-            <Field label="CIN" id="cin" value={form.cin} onChange={set('cin')} required />
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Identité personnelle</p>
+              <FieldRow label="Prénom" id="prenom" value={form.prenom} onChange={set('prenom')} required placeholder="Prénom" />
+              <FieldRow label="CIN" id="cin" value={form.cin} onChange={set('cin')} required placeholder="A123456" />
+            </div>
           </>
         )}
 
-        {/* Société fields */}
         {type === 'societe' && (
           <>
-            <Field label="ICE (15 chiffres)" id="ice" value={form.ice} onChange={set('ice')} required />
-            <Field label="Identifiant Fiscal" id="if" value={form.identifiantFiscal}
-                   onChange={set('identifiantFiscal')} required />
-            <Field label="RC" id="rc" value={form.rc} onChange={set('rc')} required />
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Informations légales</p>
+              <FieldRow label="ICE (15 chiffres)" id="ice" value={form.ice} onChange={set('ice')} required maxLength={15} pattern="^\d{15}$" placeholder="000000000000000" />
+              <FieldRow label="Identifiant Fiscal" id="if" value={form.identifiantFiscal} onChange={set('identifiantFiscal')} required placeholder="Identifiant fiscal" />
+              <FieldRow label="RC" id="rc" value={form.rc} onChange={set('rc')} required placeholder="Registre de commerce" />
+            </div>
           </>
         )}
 
-        {/* Financial */}
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Budget (DH)" id="budget" type="number" value={form.budget} onChange={set('budget')} />
-          <Field label="Crédit (DH)" id="credit" type="number" value={form.credit} onChange={set('credit')} />
+        <Separator />
+
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Situation financière</p>
+          <div className="grid grid-cols-2 gap-4">
+            <FieldRow label="Budget (DH)" id="budget" type="number" min="0" value={form.budget} onChange={set('budget')} placeholder="0" />
+            <FieldRow label="Crédit (DH)" id="credit" type="number" min="0" value={form.credit} onChange={set('credit')} placeholder="0" />
+          </div>
         </div>
+
+        <Separator />
 
         {/* Document upload */}
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Document (CIN / Registre)</label>
-          <label className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3
-                            cursor-pointer hover:border-blue-500 transition">
-            <FiUpload className="w-4 h-4 text-slate-400" />
-            <span className="text-sm text-slate-400">{file ? file.name : 'Choisir un fichier...'}</span>
-            <input type="file" className="hidden" onChange={e => setFile(e.target.files?.[0] ?? null)} />
-          </label>
+        <div className="space-y-2">
+          <Label>Document (CIN / Registre)</Label>
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'relative flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-4 cursor-pointer transition-all duration-200 select-none',
+              isDragging
+                ? 'border-primary bg-primary/10 ring-4 ring-primary/10 scale-[1.01] shadow-lg'
+                : file
+                ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
+                : 'border-border hover:border-primary/40 hover:bg-muted/30'
+            )}
+          >
+            <div className={cn(
+              'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors',
+              isDragging || file ? 'bg-primary/20' : 'bg-muted'
+            )}>
+              {file ? (
+                <FileCheck className="w-4 h-4 text-primary" />
+              ) : (
+                <Upload className={cn('w-4 h-4', isDragging ? 'text-primary animate-bounce' : 'text-muted-foreground')} />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {file ? (
+                <>
+                  <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB • Cliquez pour changer</p>
+                </>
+              ) : isDragging ? (
+                <>
+                  <p className="text-sm font-semibold text-primary">Déposez votre fichier ici</p>
+                  <p className="text-xs text-primary/70">Relâchez la souris pour importer</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Glissez-déposez ou <span className="text-primary font-semibold">parcourez</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">PDF, JPG, PNG • Max 5 MB</p>
+                </>
+              )}
+            </div>
+
+            {file && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleRemoveFile}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg flex-shrink-0 transition-colors"
+                title="Supprimer ou changer le fichier"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+            />
+          </div>
         </div>
 
+        {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => router.back()}
-                  className="flex-1 py-3 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm transition">
-            Annuler
-          </button>
-          <button type="submit" disabled={saving}
-                  className="flex-1 py-3 px-6 bg-blue-600 hover:bg-blue-500 disabled:opacity-60
-                             text-white font-semibold rounded-xl text-sm transition">
-            {saving ? 'Enregistrement...' : 'Créer le client'}
-          </button>
+          <Button type="button" variant="outline" className="flex-1" onClick={() => router.back()}>Annuler</Button>
+          <Button type="submit" disabled={saving} className="flex-1 shadow-lg shadow-primary/20">
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving ? 'Création...' : 'Créer le client'}
+          </Button>
         </div>
       </form>
-    </div>
-  );
-}
-
-function Field({ label, id, value, onChange, required = false, type = 'text' }: {
-  label: string; id: string; value: string; onChange: any; required?: boolean; type?: string;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>
-      <input
-        id={id} type={type} value={value} onChange={onChange} required={required}
-        className="w-full bg-slate-800 border border-slate-700 text-white placeholder-slate-500
-                   rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500
-                   focus:border-transparent transition"
-      />
     </div>
   );
 }
