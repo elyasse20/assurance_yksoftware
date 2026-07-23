@@ -33,12 +33,13 @@ interface Props {
   endpoint: string;
   icon?: React.ReactNode;
   extraFields?: ExtraField[];
+  fixedPayload?: Record<string, any>;
 }
 
 /**
  * Modernized reusable CRUD list for simple lookup items (Nature, Category, Parametre, TVA).
  */
-export default function SimpleList({ title, itemLabel, endpoint, icon, extraFields = [] }: Props) {
+export default function SimpleList({ title, itemLabel, endpoint, icon, extraFields = [], fixedPayload = {} }: Props) {
   const [items, setItems] = useState<SimpleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export default function SimpleList({ title, itemLabel, endpoint, icon, extraFiel
           extraPayload[f.key] = newExtra[f.key] ?? '';
         }
       });
-      await api.post(`/${endpoint}`, { name: newName, ...extraPayload });
+      await api.post(`/${endpoint}`, { name: newName, ...extraPayload, ...fixedPayload });
       setNewName('');
       setNewExtra({});
       fetchAll();
@@ -94,7 +95,7 @@ export default function SimpleList({ title, itemLabel, endpoint, icon, extraFiel
     try {
       const payload: Record<string, any> = { name: editValues.name };
       extraFields.forEach(f => { payload[f.key] = editValues[f.key]; });
-      await api.put(`/${endpoint}/${id}`, payload);
+      await api.put(`/${endpoint}/${id}`, { ...payload, ...fixedPayload });
       setEditingId(null);
       fetchAll();
     } catch (err: any) {

@@ -91,16 +91,16 @@ public class DataInitializer implements CommandLineRunner {
     private void seedParametres() {
         if (parametreRepository.count() == 0) {
             List<Parametre> parametres = List.of(
-                    Parametre.builder().name("PRIMES").type("number").value("0").build(),
-                    Parametre.builder().name("TAXE").type("number").value("0").build(),
-                    Parametre.builder().name("TAXE PARAFISCALE").type("number").value("0").build(),
-                    Parametre.builder().name("ACCESSOIRE").type("number").value("0").build(),
-                    Parametre.builder().name("CNPAC").type("number").value("0").build(),
-                    Parametre.builder().name("Nom de l'entreprise").type("text").value("YK Assurance").build(),
-                    Parametre.builder().name("TVA Standard").type("number").value("14").build()
+                    Parametre.builder().name("PRIMES").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("TAXE").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("TAXE PARAFISCALE").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("ACCESSOIRE").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("CNPAC").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("COUT").type("NUMBER").value("0").build(),
+                    Parametre.builder().name("COMMISSION").type("NUMBER").value("0").build()
             );
             parametreRepository.saveAll(parametres);
-            log.info("✓ Seeded {} default Parametres with types and values", parametres.size());
+            log.info("✓ Seeded {} standard pricing Parametres", parametres.size());
         }
     }
 

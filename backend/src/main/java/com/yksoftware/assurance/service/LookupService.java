@@ -74,7 +74,7 @@ public class LookupService {
         return parametreRepository.save(Parametre.builder()
                 .name(req.getName())
                 .value(req.getValue() != null ? req.getValue() : "0")
-                .type(req.getType() != null && !req.getType().isBlank() ? req.getType() : "NUMBER")
+                .type("NUMBER")
                 .build());
     }
 
@@ -85,9 +85,7 @@ public class LookupService {
         if (req.getValue() != null) {
             p.setValue(req.getValue());
         }
-        if (req.getType() != null && !req.getType().isBlank()) {
-            p.setType(req.getType());
-        }
+        p.setType("NUMBER");
         return parametreRepository.save(p);
     }
     public void deleteParametre(String id) {

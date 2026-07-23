@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext';
 import {
   Users, Shield, List, Settings, LogOut,
   DollarSign, Tag, Percent, FileText,
-  LayoutDashboard, ChevronRight, Sun, Moon,
+  LayoutDashboard, ChevronRight, Sun, Moon, Database,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -27,10 +27,7 @@ const navGroups = [
   {
     label: 'Configuration',
     items: [
-      { href: '/categories',     label: 'Catégories',    icon: Tag,             adminOnly: false },
-      { href: '/natures',        label: 'Natures',       icon: List,            adminOnly: false },
-      { href: '/parametres',     label: 'Paramètres',    icon: Settings,        adminOnly: false },
-      { href: '/tva',            label: 'TVA',           icon: Percent,         adminOnly: false },
+      { href: '/referentiels',   label: 'Référentiels',  icon: Database,        adminOnly: false },
       { href: '/users',          label: 'Utilisateurs',  icon: Users,           adminOnly: true  },
     ],
   },
